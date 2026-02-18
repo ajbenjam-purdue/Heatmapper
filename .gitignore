@@ -10,3 +10,18 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+
+# Ignore CMake build directories
+build/
+out/
+bin/
+
+# OS-specific hidden files
+.DS_Store
+Thumbs.db
+
+# Binaries
+*.app
+*.exe
+*.o
+*.obj
