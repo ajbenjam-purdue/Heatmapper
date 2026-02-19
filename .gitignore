@@ -25,3 +25,6 @@ Thumbs.db
 *.exe
 *.o
 *.obj
+
+# Code
+.vscode
