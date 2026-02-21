@@ -13,5 +13,5 @@ cmake --build build
 
 Build test script:
 ```sh
-g++ test.cpp ThermalNode.cpp ThermalEdge.cpp -o test && .\test.exe
+g++ test.cpp ThermalNode.cpp ThermalEdge.cpp ThermalNetwork.cpp -o test && .\test.exe
 ```

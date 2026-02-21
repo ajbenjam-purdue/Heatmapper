@@ -37,6 +37,7 @@ class ThermalEdge {
     public:
     size_t id_0, id_1;
     EdgeType type;
+    double flux;
 
     ThermalEdge(size_t id_a, size_t id_b, ConductionUniform p);
     ThermalEdge(size_t id_a, size_t id_b, ConvectionUniform p);

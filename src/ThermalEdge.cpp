@@ -52,6 +52,9 @@ double ThermalEdge::resistance() const {
         else if constexpr (std::is_same_v<T, ConvectionUniform>) {
             return 1.0 / (p.h * p.area);
         }
+        else if constexpr (std::is_same_v<T, RadiationUniform>) {
+            return 1.0 / (p.h * p.area);
+        }
         else if constexpr (std::is_same_v<T, PureResistance>) {
             return p.R;
         }
@@ -62,6 +65,6 @@ double ThermalEdge::resistance() const {
 }
 
 std::ostream& operator<<(std::ostream& os, const ThermalEdge& edge) {
-    os << "Edge between node " << edge.id_0 << " and node " << edge.id_0 << " (" << edge.type << ")";
+    os << "Edge between node " << edge.id_0 << " and node " << edge.id_1 << " (" << edge.type << ")";
     return os;
 }

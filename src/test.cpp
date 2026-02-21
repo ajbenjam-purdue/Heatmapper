@@ -1,13 +1,27 @@
 #include <iostream>
+#include <vector>
+#include <sstream>
 #include "ThermalNode.h"
 #include "ThermalEdge.h"
+#include "ThermalNetwork.h"
 
 int main() {
-    ThermalNode Node_A(0.5, 0.5, 1.0, 500.0, "Node A", 0, 15.0);
-    ThermalNode Node_B(0.4, 0.4, 1.0, 350.0, "Node B", 1, 15.0);
-    std::cout << Node_A << std::endl;
-    std::cout << Node_B << std::endl;
 
-    ThermalEdge Edge(0, 1, PureResistance{1.0});
-    std::cout << Edge << std::endl;
+    // Build nodes
+    std::vector<ThermalNode> nodes;
+    size_t linear_count = 4;
+    for (size_t i = 0; i < linear_count; i++) {
+        std::stringstream label;
+        label << "Node " << std::to_string(i) << " / " << std::to_string(linear_count);
+        nodes.push_back(ThermalNode((double)(i / (linear_count-1)), 0.5, 1.0, 1000.0, label.str(), i));
+    }
+
+    // Build edges
+    std::vector<ThermalEdge> edges;
+    for (size_t i = 0; i < linear_count - 1; i++) {
+        edges.push_back(ThermalEdge(i, i+1, PureResistance{15.0}));
+    }
+
+    // Create network
+    ThermalNetwork network("test", nodes, edges);
 }
