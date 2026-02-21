@@ -55,6 +55,9 @@ double ThermalEdge::resistance() const {
         else if constexpr (std::is_same_v<T, PureResistance>) {
             return p.R;
         }
+        else {
+            return 0.0;
+        }
     }, params);
 }
 

@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.15)
 # Name your project and specify C++
 project(Heatmapper CXX)
 
-# Enforce modern C++ standards
-set(CMAKE_CXX_STANDARD 14)
+# Enforce moderner C++ standards
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Locate wxWidgets

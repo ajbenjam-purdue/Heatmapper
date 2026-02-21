@@ -12,8 +12,6 @@ enum class EdgeType {
     RESISTANCE_PURE
 };
 
-std::ostream& operator<<(std::ostream& os, const EdgeType& type);
-
 struct ConductionUniform {
     double length;
     double k;
@@ -52,3 +50,5 @@ class ThermalEdge {
 };
 
 std::ostream& operator<<(std::ostream& os, const ThermalEdge& node);
+
+std::ostream& operator<<(std::ostream& os, const EdgeType& type);
