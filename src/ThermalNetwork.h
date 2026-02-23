@@ -11,14 +11,23 @@ class ThermalNetwork {
     // Init member nodes & edges
     std::vector<ThermalNode> network_nodes;
     std::vector<ThermalEdge> network_edges;
+    std::vector<int> network_node_ids;
 
     std::string network_label;
 
     // Supplied vectors overload
-    ThermalNetwork(std::string label, std::vector<ThermalNode> nodes, std::vector<ThermalEdge> edges);
+    ThermalNetwork(std::vector<ThermalNode> nodes, std::vector<ThermalEdge> edges, std::string label);
 
+    // No vectors, just label
+    ThermalNetwork(std::string label);
 
+    // Create and assign node(s)
+    void add_node(ThermalNode node);
 
-    // Create and assign edges
-    
+    void add_nodes(std::vector<ThermalNode> nodes);
+
+    // Create and assign edge(s)
+    void add_edge(ThermalEdge edge);
+
+    void add_edges(std::vector<ThermalEdge> edges);
 };

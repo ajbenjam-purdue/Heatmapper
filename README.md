@@ -13,5 +13,5 @@ cmake --build build
 
 Build test script:
 ```sh
-g++ test.cpp ThermalNode.cpp ThermalEdge.cpp ThermalNetwork.cpp -o test && .\test.exe
+g++ -I\c:\Users\ajben\Development\eigen-5.0.0 test.cpp ThermalNode.cpp ThermalEdge.cpp ThermalNetwork.cpp -o test && .\test.exe
 ```

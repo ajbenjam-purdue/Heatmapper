@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
-class ThermalNode {
-    public:
-
+class ThermalNode
+{
+public:
     // Init position
     double canvas_position_x;
     double canvas_position_y;
@@ -14,20 +14,24 @@ class ThermalNode {
     size_t node_id;
 
     // Init properties
-    double property_mass; // kilograms
-    double property_specific_heat; // joules per kg-K 
-    std::string property_label; // What to label the node
+    double property_mass;          // kilograms
+    double property_specific_heat; // joules per kg-K
+    std::string property_label;    // What to label the node
 
     // Init state
     double node_temperature; // celcius
 
-   ThermalNode(double position_x = 0.5, double position_y = 0.5, double mass = 1.0, double specific_heat = 500.0, std::string label = "Default Node", size_t id = 0, double temperature = 15.0); 
+    // Default node with id
+    ThermalNode(size_t id);
 
-   void setProperties(double mass = 1.0, double specific_heat = 500);
+    // Node with params
+    ThermalNode(double position_x = 0.5, double position_y = 0.5, double mass = 1.0, double specific_heat = 500.0, std::string label = "Default Node", size_t id = 0, double temperature = 15.0);
 
-   void tick(std::vector<double> fluxes, double delta_t);
+    void setProperties(double mass = 1.0, double specific_heat = 500);
 
-   void rename(std::string label);
+    void tick(std::vector<double> fluxes, double delta_t);
+
+    void rename(std::string label);
 };
 
-std::ostream& operator<<(std::ostream& os, const ThermalNode& node);
+std::ostream &operator<<(std::ostream &os, const ThermalNode &node);

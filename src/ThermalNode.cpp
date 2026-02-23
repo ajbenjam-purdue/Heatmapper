@@ -3,8 +3,20 @@
 #include <vector>
 #include "ThermalNode.h"
 
-// Constructor
-ThermalNode::ThermalNode(double position_x, double position_y, double mass, double specific_heat, std::string label, size_t id, double temperature) {
+// Constructors
+ThermalNode::ThermalNode(size_t id)
+    : canvas_position_x(0.5),
+      canvas_position_y(0.5),
+      property_mass(1.0),
+      property_specific_heat(1000.0),
+      property_label("Defualt"),
+      node_id(id),
+      node_temperature(15.0)
+{
+}
+
+ThermalNode::ThermalNode(double position_x, double position_y, double mass, double specific_heat, std::string label, size_t id, double temperature)
+{
     canvas_position_x = position_x;
     canvas_position_y = position_y;
     property_mass = mass;
@@ -17,25 +29,30 @@ ThermalNode::ThermalNode(double position_x, double position_y, double mass, doub
 }
 
 // Override Properties
-void ThermalNode::setProperties(double mass, double specific_heat) {
+void ThermalNode::setProperties(double mass, double specific_heat)
+{
     property_mass = mass;
     property_specific_heat = specific_heat;
 }
 
-void ThermalNode::tick(std::vector<double> fluxes, double delta_t) {
+void ThermalNode::tick(std::vector<double> fluxes, double delta_t)
+{
     double net_flux = 0.0;
-    for (size_t i = 0; i < fluxes.size(); i++) {
+    for (size_t i = 0; i < fluxes.size(); i++)
+    {
         net_flux += fluxes.at(i);
     }
     node_temperature += net_flux * delta_t / (property_mass * property_specific_heat);
 }
 
-void ThermalNode::rename(std::string label) {
+void ThermalNode::rename(std::string label)
+{
     property_label = label;
 }
 
 // Overload (printability)
-std::ostream& operator<<(std::ostream& os, const ThermalNode& node) {
+std::ostream &operator<<(std::ostream &os, const ThermalNode &node)
+{
     os << "Node \"" << node.property_label << "\" at position " << node.node_id << " (" << node.node_temperature << " C, " << node.property_mass << " kg)";
     return os;
 }
