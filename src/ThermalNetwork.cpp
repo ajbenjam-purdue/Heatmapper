@@ -88,3 +88,90 @@ void ThermalNetwork::apply_temperatures(std::vector<double> temperatures)
         network_nodes.at(i).node_temperature = temperatures.at(i);
     }
 }
+
+json ThermalNetwork::to_json() const {
+    json j;
+    j["label"] = network_label;
+    
+    // Order nodes
+    j["nodes"] = json::array(); // explicitly create an array
+    for (const ThermalNode& node : network_nodes) {
+        j["nodes"].push_back({
+            {"id", node.node_id},
+            {"x", node.canvas_position_x},
+            {"y", node.canvas_position_y},
+            {"mass", node.property_mass},
+            {"cp", node.property_specific_heat},
+            {"label", node.property_label},
+            {"temperature", node.node_temperature},
+            {"is_fixed", node.is_fixed_temperature},
+            {"load", node.ext_load}
+        });
+    }
+
+    // Order network edges
+    j["edges"] = json::array();
+    for (const ThermalEdge& edge : network_edges) {
+        json edge_json = {
+            {"id_0", edge.id_0},
+            {"id_1", edge.id_1},
+            {"type", static_cast<int>(edge.type)} // Store the enum as an int
+        };
+
+        // Extract the variant data based on the type
+        if (edge.type == EdgeType::RESISTANCE_PURE) {
+            edge_json["R"] = std::get<PureResistance>(edge.params).R;
+        } 
+        // TODO: Other resistance types
+
+        j["edges"].push_back(edge_json);
+    }
+
+    return j;
+}
+
+ThermalNetwork ThermalNetwork::from_json(const json& j) {
+    // Read label and create an empty network
+    std::string label = j.value("label", "Imported Network");
+    ThermalNetwork new_network(label);
+
+    // Deserialize nodes in correct order
+    if (j.contains("nodes")) {
+        for (const auto& node_json : j["nodes"]) {
+            // Reconstruct the node obj
+            ThermalNode node(
+                node_json["x"], node_json["y"], 
+                node_json["mass"], node_json["cp"], 
+                node_json["label"], node_json["id"], 
+                node_json["temperature"]
+            );
+            
+            // Apply constraints
+            if (node_json["is_fixed"]) {
+                node.fixTemperature(node_json["temperature"]);
+            } else if (node_json["load"] != 0.0) {
+                node.applyHeatLoad(node_json["load"]);
+            }
+
+            new_network.add_node(node);
+        }
+    }
+
+    // Deserialize Edges
+    if (j.contains("edges")) {
+        for (const auto& edge_json : j["edges"]) {
+            size_t id_0 = edge_json["id_0"];
+            size_t id_1 = edge_json["id_1"];
+            int type_int = edge_json["type"];
+            EdgeType type = static_cast<EdgeType>(type_int);
+
+            if (type == EdgeType::RESISTANCE_PURE) {
+                PureResistance p { edge_json["R"] };
+                new_network.add_edge(ThermalEdge(id_0, id_1, p));
+            }
+            // TODO: other resistance types
+        }
+    }
+
+    return new_network;
+}

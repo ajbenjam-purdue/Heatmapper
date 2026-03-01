@@ -5,6 +5,9 @@
 #include "ThermalNode.h"
 #include "ThermalEdge.h"
 
+#include <json.hpp>
+using json = nlohmann::json;
+
 class ThermalNetwork {
     public:
 
@@ -34,4 +37,9 @@ class ThermalNetwork {
     int get_node_count(void);
 
     void apply_temperatures(std::vector<double> temperatures);
+
+    // Import/Export
+    json to_json() const;
+    
+    static ThermalNetwork from_json(const json& j);
 };

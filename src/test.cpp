@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <sstream>
 #include <json.hpp>
@@ -30,4 +31,11 @@ int main() {
     ThermalNetwork network(nodes, edges, "network");
 
     ThermalSolver::solveSteadyState(network); // Solve
+
+    json j;
+    j = network.to_json();
+    std::ofstream o("test.json");
+    if (o.is_open()) {
+        o << std::setw(4) << j << std::endl;
+    }
 }

@@ -45,8 +45,6 @@ class ThermalEdge {
     ThermalEdge(size_t id_a, size_t id_b, PureResistance p);
 
     double resistance() const;
-
-    private:
     std::variant<ConductionUniform, ConvectionUniform, RadiationUniform, PureResistance> params;
 };
 

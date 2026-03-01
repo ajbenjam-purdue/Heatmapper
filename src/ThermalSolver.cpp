@@ -40,8 +40,8 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network)
     auto solve_start = std::chrono::steady_clock::now();
     Eigen::VectorXd T = K.colPivHouseholderQr().solve(Q);
     auto solve_complete = std::chrono::steady_clock::now();
-    std::cout << "Solution found in " << std::chrono::duration<double, std::milli>(solve_complete - solve_start) << "ms" << std::endl;
-    
+    std::cout << "Solution found in " << std::chrono::duration<double, std::micro>(solve_complete - solve_start) << std::endl;
+
     // Write solution to network's nodes
     network.apply_temperatures(std::vector<double>(T.data(), T.data()+T.size()));
 }
