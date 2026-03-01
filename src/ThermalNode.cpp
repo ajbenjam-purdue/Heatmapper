@@ -35,6 +35,8 @@ void ThermalNode::setProperties(double mass, double specific_heat)
     property_specific_heat = specific_heat;
 }
 
+// No longer used
+/*
 void ThermalNode::tick(std::vector<double> fluxes, double delta_t)
 {
     double net_flux = 0.0;
@@ -44,10 +46,28 @@ void ThermalNode::tick(std::vector<double> fluxes, double delta_t)
     }
     node_temperature += net_flux * delta_t / (property_mass * property_specific_heat);
 }
+*/
 
 void ThermalNode::rename(std::string label)
 {
     property_label = label;
+}
+
+void ThermalNode::fixTemperature(double temp)
+{
+    is_fixed_temperature = true;
+    node_temperature = temp;
+}
+
+void ThermalNode::applyHeatLoad(double watts)
+{
+    ext_load = watts;
+}
+
+void ThermalNode::clearConstraints()
+{
+    is_fixed_temperature = false;
+    ext_load= 0.0;
 }
 
 // Overload (printability)

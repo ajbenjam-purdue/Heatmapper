@@ -14,14 +14,14 @@ ThermalNetwork::ThermalNetwork(std::vector<ThermalNode> nodes, std::vector<Therm
     {
         network_node_ids.push_back(network_nodes.at(i).node_id);
     }
-    std::cout << "Created network " << label << std::endl;
+    std::cout << "Created network \"" << label << "\" with nodes and vectors" << std::endl;
 }
 
 // Empty network
 ThermalNetwork::ThermalNetwork(std::string label)
     : network_label(label)
 {
-    std::cout << "Initialized empty network " << label << std::endl;
+    std::cout << "Initialized empty network \"" << label << "\"" << std::endl;
 }
 
 // Add node, update network
@@ -73,5 +73,18 @@ void ThermalNetwork::add_edges(std::vector<ThermalEdge> edges)
             // One+ missing, do nothing
             std::cout << "Edge " << edges.at(i).type << " connects to at least one non-existent node, not added. " << std::endl;
         }
+    }
+}
+
+int ThermalNetwork::get_node_count(void)
+{
+    return network_nodes.size();
+}
+
+void ThermalNetwork::apply_temperatures(std::vector<double> temperatures)
+{
+    for (size_t i = 0; i < temperatures.size(); i++)
+    {
+        network_nodes.at(i).node_temperature = temperatures.at(i);
     }
 }

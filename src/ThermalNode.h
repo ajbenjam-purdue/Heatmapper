@@ -20,6 +20,8 @@ public:
 
     // Init state
     double node_temperature; // celcius
+    bool is_fixed_temperature; // Is the node fixed?
+    double ext_load; // W, to simulate heat flux impositions
 
     // Default node with id
     ThermalNode(size_t id);
@@ -29,9 +31,13 @@ public:
 
     void setProperties(double mass = 1.0, double specific_heat = 500);
 
-    void tick(std::vector<double> fluxes, double delta_t);
-
     void rename(std::string label);
+
+    void fixTemperature(double temp);
+
+    void applyHeatLoad(double watts);
+
+    void clearConstraints();
 };
 
 std::ostream &operator<<(std::ostream &os, const ThermalNode &node);

@@ -30,4 +30,8 @@ class ThermalNetwork {
     void add_edge(ThermalEdge edge);
 
     void add_edges(std::vector<ThermalEdge> edges);
+
+    int get_node_count(void);
+
+    void apply_temperatures(std::vector<double> temperatures);
 };
