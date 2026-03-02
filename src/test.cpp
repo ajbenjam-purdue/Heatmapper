@@ -16,7 +16,7 @@ int main() {
     for (size_t i = 0; i < linear_count; i++) {
         std::stringstream label;
         label << "Node " << std::to_string(i) << " / " << std::to_string(linear_count);
-        nodes.push_back(ThermalNode((double)(i / (linear_count-1)), 0.5, 1.0, 1000.0, label.str(), i));
+        nodes.push_back(ThermalNode(((double)(i) / (linear_count-1)), 0.5, 1.0, 1000.0, label.str(), i));
     }
     nodes.at(0).fixTemperature(15.0); // Approximate heatsink
     nodes.at(3).applyHeatLoad(200.0); // Approximate CPU
@@ -38,4 +38,5 @@ int main() {
     if (o.is_open()) {
         o << std::setw(4) << j << std::endl;
     }
+    o.close();
 }

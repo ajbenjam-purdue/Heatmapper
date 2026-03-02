@@ -1,31 +1,47 @@
 cmake_minimum_required(VERSION 3.15)
 
-# Name your project and specify C++
+# Name the project and specify C++
 project(Heatmapper CXX)
 
-# Enforce moderner C++ standards
+# Export compilation commands to json since Intellisense is being annoying
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Enforce modern(er) C++ standards
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Locate wxWidgets
 find_package(wxWidgets REQUIRED COMPONENTS core base)
 
-# Create the executable
-add_executable(Heatmapper WIN32 MACOSX_BUNDLE src/main.cpp)
+# Define Mac icon (haven't made one yet)
+# set(APP_ICON "assets/AppIcon.icns")
+# set_source_files_properties(${APP_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
-# --- THE MAPPED DEPENDENCIES ---
-# 1. Map the headers
-target_include_directories(Heatmapper PRIVATE ${wxWidgets_INCLUDE_DIRS})
-# 2. Map the target definitions (THIS FIXES THE 'NO TARGET' ERROR)
+# Create the executable w/ all source files
+add_executable(Heatmapper WIN32 MACOSX_BUNDLE 
+    src/App.cpp 
+    src/MainFrame.cpp
+    src/ThermalNode.cpp
+    src/ThermalEdge.cpp
+    src/ThermalNetwork.cpp
+    src/ThermalSolver.cpp
+    src/ThermalCanvas.cpp
+)
+
+target_include_directories(Heatmapper PRIVATE 
+    ${wxWidgets_INCLUDE_DIRS}
+    /Users/ajbenj/Development/Libraries/
+    /Users/ajbenj/Development/Libraries/eigen-5.0.1
+)
+
+# Map target definitions and flags
 target_compile_definitions(Heatmapper PRIVATE ${wxWidgets_DEFINITIONS})
-# 3. Map any extra compiler flags
 target_compile_options(Heatmapper PRIVATE ${wxWidgets_CXX_FLAGS})
-# -------------------------------
 
-# Link the wxWidgets libraries to your app
+# Link the compiled wxWidgets libraries
 target_link_libraries(Heatmapper PRIVATE ${wxWidgets_LIBRARIES})
 
-# Tell CMake to use your custom Info.plist
+# Use custom Info.plist
 set_target_properties(Heatmapper PROPERTIES 
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist"
 )

@@ -1,0 +1,69 @@
+{
+    "edges": [
+        {
+            "R": 0.1,
+            "id_0": 0,
+            "id_1": 1,
+            "type": 3
+        },
+        {
+            "R": 0.1,
+            "id_0": 1,
+            "id_1": 2,
+            "type": 3
+        },
+        {
+            "R": 0.1,
+            "id_0": 2,
+            "id_1": 3,
+            "type": 3
+        }
+    ],
+    "label": "network",
+    "nodes": [
+        {
+            "cp": 1000.0,
+            "id": 0,
+            "is_fixed": true,
+            "label": "Node 0 / 4",
+            "load": 0.0,
+            "mass": 1.0,
+            "temperature": 15.00000002,
+            "x": 0.0,
+            "y": 0.5
+        },
+        {
+            "cp": 1000.0,
+            "id": 1,
+            "is_fixed": false,
+            "label": "Node 1 / 4",
+            "load": 0.0,
+            "mass": 1.0,
+            "temperature": 35.00000001999997,
+            "x": 0.3333333333333333,
+            "y": 0.5
+        },
+        {
+            "cp": 1000.0,
+            "id": 2,
+            "is_fixed": false,
+            "label": "Node 2 / 4",
+            "load": 0.0,
+            "mass": 1.0,
+            "temperature": 55.00000001999998,
+            "x": 0.6666666666666666,
+            "y": 0.5
+        },
+        {
+            "cp": 1000.0,
+            "id": 3,
+            "is_fixed": false,
+            "label": "Node 3 / 4",
+            "load": 200.0,
+            "mass": 1.0,
+            "temperature": 75.00000001999997,
+            "x": 1.0,
+            "y": 0.5
+        }
+    ]
+}
