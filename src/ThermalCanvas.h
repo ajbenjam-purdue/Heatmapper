@@ -1,9 +1,22 @@
 #pragma once
 #include <wx/wx.h>
 #include "ThermalNetwork.h"
+#include "MainFrame.h"
 
 class ThermalCanvas : public wxPanel {
 public:
+    const static int CANVAS_MARGIN = 20; // pixels, on each side
+    const static float constexpr NODE_RADIUS = 10.0; // pixels
+
+    // State
+    int m_sel_node_index = -1;
+    bool m_is_dragging = false;
+
+    // Interaction
+    void OnMouseLeftDown(wxMouseEvent& event);
+    void OnMouseLeftUp(wxMouseEvent& event);
+    void OnMouseMove(wxMouseEvent& event);
+
     ThermalCanvas(wxWindow* parent);
     
     // Allow the MainFrame to give the canvas a network to draw

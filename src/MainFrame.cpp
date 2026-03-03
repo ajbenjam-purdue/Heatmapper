@@ -7,7 +7,8 @@
 // Map the events
 enum {
     ID_RunSteadyState = wxID_HIGHEST + 1,
-    ID_RunTransient = wxID_HIGHEST + 2
+    ID_RunTransient = wxID_HIGHEST + 2,
+    ID_ApplyProperties = wxID_HIGHEST + 3
 };
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -16,6 +17,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_EXIT, MainFrame::OnExit)
     EVT_MENU(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_BUTTON(ID_RunSteadyState, MainFrame::OnRunSteadyState)
+    EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
 wxEND_EVENT_TABLE()
 
 void MainFrame::OnRunSteadyState(wxCommandEvent& event) {
@@ -43,8 +45,23 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxBoxSizer* properties_sizer = new wxBoxSizer(wxVERTICAL); // Sizer for panel
     wxButton* run_ss_button = new wxButton(properties_panel, ID_RunSteadyState, "Solve Steady State");
     wxButton* run_tr_button = new wxButton(properties_panel, ID_RunTransient, "Transient Analysis");
-    properties_sizer->Add(run_ss_button, 1, wxEXPAND | wxALL, 8);
-    properties_sizer->Add(run_tr_button, 1, wxEXPAND | wxALL, 8);
+    m_node_label = new wxStaticText(properties_panel, wxID_ANY, "Select a node...");
+    properties_sizer->Add(m_node_label, 0, wxALL | wxEXPAND, 5);
+
+    properties_sizer->Add(new wxStaticText(properties_panel, wxID_ANY, "Temperature (°C):"), 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_temp_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    properties_sizer->Add(m_temp_input, 0, wxALL | wxEXPAND, 5);
+
+    properties_sizer->Add(new wxStaticText(properties_panel, wxID_ANY, "Heat Load (W):"), 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_load_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    properties_sizer->Add(m_load_input, 0, wxALL | wxEXPAND, 5);
+
+    // Give this button a new custom ID like ID_ApplyProperties
+    m_apply_button = new wxButton(properties_panel, ID_ApplyProperties, "Apply Changes");
+    properties_sizer->Add(m_apply_button, 0, wxALL | wxEXPAND, 5);
+    properties_sizer->AddStretchSpacer(1);
+    properties_sizer->Add(run_ss_button, 0, wxEXPAND | wxALL, 8);
+    properties_sizer->Add(run_tr_button, 0, wxEXPAND | wxALL, 8);
     properties_panel->SetSizer(properties_sizer);
 
     // Sizer buildout
@@ -133,4 +150,49 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
     } else {
         wxLogError("Cannot open file '%s'.", openFileDialog.GetPath());
     }
+}
+
+void MainFrame::ShowNodeProperties(int node_index) {
+    m_currently_editing_node = node_index;
+
+    if (node_index == -1) {
+        m_node_label->SetLabel("Select a node...");
+        m_temp_input->Clear();
+        m_load_input->Clear();
+        return;
+    }
+
+    // Grab the node and populate the text boxes
+    ThermalNode& node = m_active_network.network_nodes[node_index];
+    
+    m_node_label->SetLabel(wxString::Format("Editing Node %d", node_index));
+    m_temp_input->SetValue(wxString::Format("%.2f", node.node_temperature));
+    m_load_input->SetValue(wxString::Format("%.2f", node.ext_load));
+}
+
+void MainFrame::OnApplyProperties(wxCommandEvent& event) {
+    if (m_currently_editing_node == -1) return; // Nothing selected
+
+    ThermalNode& node = m_active_network.network_nodes[m_currently_editing_node];
+
+    // Read the text from the UI
+    wxString temp_str = m_temp_input->GetValue();
+    wxString load_str = m_load_input->GetValue();
+
+    double new_temp, new_load;
+
+    // ToDouble() safely checks if the user typed valid numbers!
+    if (temp_str.ToDouble(&new_temp)) {
+        node.node_temperature = new_temp;
+        
+        // If they explicitly change the temp, let's fix it as a boundary condition!
+        node.fixTemperature(new_temp); 
+    }
+    
+    if (load_str.ToDouble(&new_load)) {
+        node.applyHeatLoad(new_load);
+    }
+
+    // Tell the canvas to redraw with the new numbers
+    m_canvas->Refresh();
 }
