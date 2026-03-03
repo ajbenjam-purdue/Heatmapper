@@ -14,6 +14,8 @@ private:
     void OnOpen(wxCommandEvent& event);
     void OnSaveAs(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
+    void OnRunSteadyState(wxCommandEvent& event);
+    void OnRunTransient(wxCommandEvent& event);
     
     wxDECLARE_EVENT_TABLE();
 };

@@ -42,4 +42,10 @@ class ThermalNetwork {
     json to_json() const;
     
     static ThermalNetwork from_json(const json& j);
+
+    // Diagnostics
+    double highest_node_temperature();
+    
+    double lowest_node_temperature();
+    
 };

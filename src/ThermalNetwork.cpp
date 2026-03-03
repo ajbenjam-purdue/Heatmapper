@@ -175,3 +175,34 @@ ThermalNetwork ThermalNetwork::from_json(const json& j) {
 
     return new_network;
 }
+
+
+double ThermalNetwork::highest_node_temperature()
+{
+    // Catch empty network, yield 0.0
+    if (network_nodes.size() == 0)
+        return 0.0;
+    
+    // Network has at least one element
+    double res = network_nodes.at(0).node_temperature; // Initialize to first node temperature
+    for (size_t i = 1; i < network_nodes.size(); i++)
+    {
+        res = std::max(res, network_nodes.at(i).node_temperature);
+    }
+    return res;
+}
+
+double ThermalNetwork::lowest_node_temperature() 
+{
+    // Catch empty network, yield 0.0
+    if (network_nodes.size() == 0)
+        return 0.0;
+    
+    // Network has at least one element
+    double res = network_nodes.at(0).node_temperature; // Initialize to first node temperature
+    for (size_t i = 1; i < network_nodes.size(); i++)
+    {
+        res = std::min(res, network_nodes.at(i).node_temperature);
+    }
+    return res;
+}

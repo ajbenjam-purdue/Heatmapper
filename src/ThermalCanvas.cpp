@@ -47,12 +47,26 @@ void ThermalCanvas::OnPaint(wxPaintEvent& event) {
     gc->SetPen(wxPen(wxColour(200, 200, 200), 2)); // Node outline
     gc->SetBrush(wxBrush(wxColour(50, 120, 200))); // Node fill color (Blue)
 
-    double node_radius = 12.0;
+    double node_radius = 8.0;
+
+    double max_node_temperature = m_network->highest_node_temperature();
+    double min_node_temperature = m_network->lowest_node_temperature();
 
     for (const ThermalNode& node : m_network->network_nodes) {
+
+        // Node position
         double x = (node.canvas_position_x * width) - node_radius;
         double y = (node.canvas_position_y * height) - node_radius;
 
+        // Node color
+        if (max_node_temperature == min_node_temperature)
+            gc->SetBrush(wxBrush(wxColour(50, 120, 200)));
+        else
+        {
+            double rat = (node.node_temperature - min_node_temperature) / (max_node_temperature - min_node_temperature);
+            gc->SetBrush(wxBrush(wxColour((int)(200*rat)+30, 35, int(200*(1-rat))+30)));
+            gc->SetPen(wxPen(wxColour((int)(200*rat)+10, 15, int(200*(1-rat))+10)));
+        }
         gc->DrawEllipse(x, y, node_radius * 2, node_radius * 2);
     }
 }
