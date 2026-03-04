@@ -8,13 +8,15 @@ class MainFrame : public wxFrame {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
     void ShowNodeProperties(int node_index);
+    void ShowEdgeProperties(int edge_index);
 
 private:
 
-    wxStaticText* m_node_label;
-    wxTextCtrl* m_temp_input;
-    wxTextCtrl* m_load_input;
-    wxButton* m_apply_button;
+    wxStaticText* m_node_label; // What the node is labeled
+    wxTextCtrl* m_temp_input; // What the temp should be
+    wxCheckBox* m_is_fixed_checkbox; // If the temp is a fixed point
+    wxTextCtrl* m_load_input; // What the input load is (W)
+    wxButton* m_apply_button; // Apply button
 
     int m_currently_editing_node = -1;
 

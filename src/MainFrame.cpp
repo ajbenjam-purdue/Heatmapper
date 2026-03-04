@@ -52,6 +52,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     m_temp_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
     properties_sizer->Add(m_temp_input, 0, wxALL | wxEXPAND, 5);
 
+    m_is_fixed_checkbox = new wxCheckBox(properties_panel, wxID_ANY, "Fix Temperature");
+    properties_sizer->Add(m_is_fixed_checkbox, 0, wxALL | wxEXPAND, 5);
+
     properties_sizer->Add(new wxStaticText(properties_panel, wxID_ANY, "Heat Load (W):"), 0, wxLEFT | wxRIGHT | wxTOP, 5);
     m_load_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
     properties_sizer->Add(m_load_input, 0, wxALL | wxEXPAND, 5);
@@ -159,6 +162,7 @@ void MainFrame::ShowNodeProperties(int node_index) {
         m_node_label->SetLabel("Select a node...");
         m_temp_input->Clear();
         m_load_input->Clear();
+        m_is_fixed_checkbox->SetValue(false);
         return;
     }
 
@@ -168,6 +172,28 @@ void MainFrame::ShowNodeProperties(int node_index) {
     m_node_label->SetLabel(wxString::Format("Editing Node %d", node_index));
     m_temp_input->SetValue(wxString::Format("%.2f", node.node_temperature));
     m_load_input->SetValue(wxString::Format("%.2f", node.ext_load));
+    m_is_fixed_checkbox->SetValue(node.is_fixed_temperature);
+}
+
+// TODO: COMPLETE
+void MainFrame::ShowEdgeProperties(int node_index) {
+    m_currently_editing_node = node_index;
+
+    if (node_index == -1) {
+        m_node_label->SetLabel("Select a node...");
+        m_temp_input->Clear();
+        m_load_input->Clear();
+        m_is_fixed_checkbox->SetValue(false);
+        return;
+    }
+
+    // Grab the node and populate the text boxes
+    ThermalNode& node = m_active_network.network_nodes[node_index];
+    
+    m_node_label->SetLabel(wxString::Format("Editing Node %d", node_index));
+    m_temp_input->SetValue(wxString::Format("%.2f", node.node_temperature));
+    m_load_input->SetValue(wxString::Format("%.2f", node.ext_load));
+    m_is_fixed_checkbox->SetValue(node.is_fixed_temperature);
 }
 
 void MainFrame::OnApplyProperties(wxCommandEvent& event) {
@@ -191,6 +217,16 @@ void MainFrame::OnApplyProperties(wxCommandEvent& event) {
     
     if (load_str.ToDouble(&new_load)) {
         node.applyHeatLoad(new_load);
+    }
+
+    if (m_is_fixed_checkbox->GetValue()) {
+        // This helper safely sets is_fixed_temp to true and load to 0
+        node.fixTemperature(new_temp); 
+    } else {
+        // Unlock it and apply the heat load instead
+        node.is_fixed_temperature = false;
+        node.node_temperature = new_temp; 
+        node.applyHeatLoad(new_load);     
     }
 
     // Tell the canvas to redraw with the new numbers
