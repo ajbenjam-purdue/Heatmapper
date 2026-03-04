@@ -206,3 +206,34 @@ double ThermalNetwork::lowest_node_temperature()
     }
     return res;
 }
+
+// Count of nodes with a fixed temperature
+int ThermalNetwork::nodes_with_temperature_fix()
+{
+    int res = 0;
+    for (ThermalNode &node : network_nodes)
+    {
+        res += (node.is_fixed_temperature ? 1 : 0);
+    }
+    return res;
+}
+
+// Count of nodes with an input/output flux
+int ThermalNetwork::nodes_with_flux_fix() 
+{
+    int res = 0;
+    for (ThermalNode &node : network_nodes)
+    {
+        res += (node.ext_load != 0.0 ? 1 : 0);
+    }
+    return res;
+}
+
+// Gets the flux across an edge
+double ThermalNetwork::get_edge_flux(size_t id) 
+{
+    ThermalNode& node_a = network_nodes[network_edges[id].id_0];
+    ThermalNode& node_b = network_nodes[network_edges[id].id_1];
+    double resistance = network_edges[id].resistance();
+    return (node_b.node_temperature - node_a.node_temperature) / resistance;
+}

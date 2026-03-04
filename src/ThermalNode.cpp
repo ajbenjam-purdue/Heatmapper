@@ -35,19 +35,6 @@ void ThermalNode::setProperties(double mass, double specific_heat)
     property_specific_heat = specific_heat;
 }
 
-// No longer used
-/*
-void ThermalNode::tick(std::vector<double> fluxes, double delta_t)
-{
-    double net_flux = 0.0;
-    for (size_t i = 0; i < fluxes.size(); i++)
-    {
-        net_flux += fluxes.at(i);
-    }
-    node_temperature += net_flux * delta_t / (property_mass * property_specific_heat);
-}
-*/
-
 void ThermalNode::rename(std::string label)
 {
     property_label = label;

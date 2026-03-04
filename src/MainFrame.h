@@ -16,9 +16,18 @@ private:
     wxTextCtrl* m_temp_input; // What the temp should be
     wxCheckBox* m_is_fixed_checkbox; // If the temp is a fixed point
     wxTextCtrl* m_load_input; // What the input load is (W)
+
+    wxTextCtrl* m_res_input; // What the edge resistance should be
+
     wxButton* m_apply_button; // Apply button
 
+    // Labels
+    wxStaticText* m_temp_label;
+    wxStaticText* m_load_label;
+    wxStaticText* m_thermal_res_label;
+
     int m_currently_editing_node = -1;
+    int m_currently_editing_edge = -1;
 
     ThermalNetwork m_active_network;
     ThermalCanvas* m_canvas;

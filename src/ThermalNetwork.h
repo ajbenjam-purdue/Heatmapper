@@ -48,4 +48,9 @@ class ThermalNetwork {
     
     double lowest_node_temperature();
     
+    int nodes_with_temperature_fix(); // Count of nodes with a fixed temperature
+
+    int nodes_with_flux_fix(); // Count of nodes with an input/output flux
+
+    double get_edge_flux(size_t id); // Gets the flux across an edge
 };

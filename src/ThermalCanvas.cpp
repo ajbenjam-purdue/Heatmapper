@@ -36,11 +36,12 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     GetClientSize(&width, &height);
 
     // Draw edges, then nodes
-    gc->SetPen(wxPen(wxColour(150, 150, 150), 3)); // 3 pt 150 gray
+    gc->SetPen(wxPen(wxColour(150, 150, 150), 3));
 
-    for (const ThermalEdge &edge : m_network->network_edges)
+    for (size_t i = 0; i < m_network->network_edges.size(); i++)
     {
         // Find the two nodes this edge connects
+        const ThermalEdge &edge = m_network->network_edges[i];
         const ThermalNode &n0 = m_network->network_nodes[edge.id_0];
         const ThermalNode &n1 = m_network->network_nodes[edge.id_1];
 
@@ -49,11 +50,18 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         double x2 = n1.canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
         double y2 = n1.canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
 
+        if (i == m_sel_edge_index)
+        {
+            gc->SetPen(wxPen(COLOR_SELECT, 4)); // Thick yellow pen
+        }
+        else
+            gc->SetPen(wxPen(COLOR_DESELECT, 2));
+
         gc->StrokeLine(x1, y1, x2, y2);
     }
 
     // Now draw nodes
-    gc->SetBrush(wxBrush(wxColour(50, 120, 200))); // Node fill color (Blue)
+    gc->SetBrush(wxBrush(COLOR_UNKNOWN)); // Unknown state
 
     double max_node_temperature = m_network->highest_node_temperature();
     double min_node_temperature = m_network->lowest_node_temperature();
@@ -70,7 +78,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         double y = node.canvas_position_y * (height - CANVAS_MARGIN * 2) - NODE_RADIUS + CANVAS_MARGIN;
 
         // Heat flux out/in
-        if (node.ext_load > 0.0)
+        if (std::abs(node.ext_load) > 0.0)
         {
             gc->SetPen(wxPen(wxColour(255, 120, 0), 3)); // 3px Orange Pen
 
@@ -86,8 +94,14 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
             gc->StrokeLine(tip_x, tip_y - 15, tip_x, tip_y);
 
             // Draw the left and right arrow heads
-            gc->StrokeLine(tip_x, tip_y, tip_x - 5, tip_y - 5);
-            gc->StrokeLine(tip_x, tip_y, tip_x + 5, tip_y - 5);
+            if (node.ext_load > 0.0) {
+                gc->StrokeLine(tip_x, tip_y, tip_x - 5, tip_y - 5);
+                gc->StrokeLine(tip_x, tip_y, tip_x + 5, tip_y - 5);
+            }
+            else {
+                gc->StrokeLine(tip_x, tip_y-15, tip_x - 5, tip_y - 10);
+                gc->StrokeLine(tip_x, tip_y-15, tip_x + 5, tip_y - 10);
+            }
         }
 
         // Node color
@@ -106,7 +120,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         // Selection pen
         if (node.node_id == m_sel_node_index)
         {
-            gc->SetPen(wxPen(wxColour(255, 255, 0), 4)); // Thick yellow pen
+            gc->SetPen(wxPen(COLOR_SELECT, 3)); // Thick yellow pen
         }
 
         gc->DrawEllipse(x, y, NODE_RADIUS * 2, NODE_RADIUS * 2);
@@ -177,8 +191,8 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
             // Convert everything to screen px
             double edge_x_1 = m_network->network_nodes[edge.id_0].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
             double edge_y_1 = m_network->network_nodes[edge.id_0].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-            double edge_x_2 = m_network->network_nodes[edge.id_0].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-            double edge_y_2 = m_network->network_nodes[edge.id_0].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+            double edge_x_2 = m_network->network_nodes[edge.id_1].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+            double edge_y_2 = m_network->network_nodes[edge.id_1].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
 
             // Check first if bounding box criteria is met
             if (in_bounding_box(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) && distance_perpendicular(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) <= EDGE_SELECTION_TOLERANCE)

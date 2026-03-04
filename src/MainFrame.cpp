@@ -48,16 +48,23 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     m_node_label = new wxStaticText(properties_panel, wxID_ANY, "Select a node...");
     properties_sizer->Add(m_node_label, 0, wxALL | wxEXPAND, 5);
 
-    properties_sizer->Add(new wxStaticText(properties_panel, wxID_ANY, "Temperature (°C):"), 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_temp_label = new wxStaticText(properties_panel, wxID_ANY, "Temperature (°C):");
+    properties_sizer->Add(m_temp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
     m_temp_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
     properties_sizer->Add(m_temp_input, 0, wxALL | wxEXPAND, 5);
 
     m_is_fixed_checkbox = new wxCheckBox(properties_panel, wxID_ANY, "Fix Temperature");
     properties_sizer->Add(m_is_fixed_checkbox, 0, wxALL | wxEXPAND, 5);
 
-    properties_sizer->Add(new wxStaticText(properties_panel, wxID_ANY, "Heat Load (W):"), 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_load_label = new wxStaticText(properties_panel, wxID_ANY, "Heat Load (W):");
+    properties_sizer->Add(m_load_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
     m_load_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
     properties_sizer->Add(m_load_input, 0, wxALL | wxEXPAND, 5);
+
+    m_thermal_res_label = new wxStaticText(properties_panel, wxID_ANY, "Thermal Resistance (W/K):");
+    properties_sizer->Add(m_thermal_res_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_res_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    properties_sizer->Add(m_res_input, 0, wxALL | wxEXPAND, 5);
 
     // Give this button a new custom ID like ID_ApplyProperties
     m_apply_button = new wxButton(properties_panel, ID_ApplyProperties, "Apply Changes");
@@ -157,6 +164,17 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
 
 void MainFrame::ShowNodeProperties(int node_index) {
     m_currently_editing_node = node_index;
+    m_currently_editing_edge = -1;
+
+    // Hide all relevant info for edge properties + show all relevant info for node properties
+    m_node_label->Show();
+    m_temp_input->Show();
+    m_temp_label->Show();
+    m_is_fixed_checkbox->Show();
+    m_load_input->Show();
+    m_load_label->Show();
+    m_res_input->Hide();
+    m_thermal_res_label->Hide();
 
     if (node_index == -1) {
         m_node_label->SetLabel("Select a node...");
@@ -173,62 +191,84 @@ void MainFrame::ShowNodeProperties(int node_index) {
     m_temp_input->SetValue(wxString::Format("%.2f", node.node_temperature));
     m_load_input->SetValue(wxString::Format("%.2f", node.ext_load));
     m_is_fixed_checkbox->SetValue(node.is_fixed_temperature);
+
+    this->Layout();
 }
 
-// TODO: COMPLETE
-void MainFrame::ShowEdgeProperties(int node_index) {
-    m_currently_editing_node = node_index;
 
-    if (node_index == -1) {
-        m_node_label->SetLabel("Select a node...");
-        m_temp_input->Clear();
-        m_load_input->Clear();
-        m_is_fixed_checkbox->SetValue(false);
+void MainFrame::ShowEdgeProperties(int edge_index) {
+    m_currently_editing_edge = edge_index;
+    m_currently_editing_node = -1;
+
+    // Hide all relevant info for node properties + show all relevant info for edge properties
+    m_node_label->Hide();
+    m_temp_label->Hide();
+    m_temp_input->Hide();
+    m_is_fixed_checkbox->Hide();
+    m_load_input->Hide();
+    m_load_label->Hide();
+    m_res_input->Show();
+    m_thermal_res_label->Show();
+
+
+    // No edge selected
+    if (edge_index == -1) {
+        m_res_input->Clear();
         return;
     }
 
-    // Grab the node and populate the text boxes
-    ThermalNode& node = m_active_network.network_nodes[node_index];
+    // Grab the edge and populate the text boxes
+    ThermalEdge& edge = m_active_network.network_edges[edge_index];
     
-    m_node_label->SetLabel(wxString::Format("Editing Node %d", node_index));
-    m_temp_input->SetValue(wxString::Format("%.2f", node.node_temperature));
-    m_load_input->SetValue(wxString::Format("%.2f", node.ext_load));
-    m_is_fixed_checkbox->SetValue(node.is_fixed_temperature);
+    m_res_input->SetValue(wxString::Format("%.2f", edge.resistance()));
+
+    this->Layout();
 }
 
 void MainFrame::OnApplyProperties(wxCommandEvent& event) {
-    if (m_currently_editing_node == -1) return; // Nothing selected
+    if (m_currently_editing_node != -1) 
+    {
 
-    ThermalNode& node = m_active_network.network_nodes[m_currently_editing_node];
+        ThermalNode& node = m_active_network.network_nodes[m_currently_editing_node];
 
-    // Read the text from the UI
-    wxString temp_str = m_temp_input->GetValue();
-    wxString load_str = m_load_input->GetValue();
+        // Read the text from the UI
+        wxString temp_str = m_temp_input->GetValue();
+        wxString load_str = m_load_input->GetValue();
 
-    double new_temp, new_load;
+        double new_temp, new_load;
 
-    // ToDouble() safely checks if the user typed valid numbers!
-    if (temp_str.ToDouble(&new_temp)) {
-        node.node_temperature = new_temp;
+        // ToDouble() safely checks if the user typed valid numbers!
+        if (temp_str.ToDouble(&new_temp)) {
+            node.node_temperature = new_temp;
+            
+            // If they explicitly change the temp, let's fix it as a boundary condition!
+            node.fixTemperature(new_temp); 
+        }
+
+        if (load_str.ToDouble(&new_load)) {
+            node.applyHeatLoad(new_load);
+        }
+
+        if (m_is_fixed_checkbox->GetValue()) {
+            // If box is checked, make sure to apply BC
+            node.fixTemperature(new_temp); 
+        } else {
+            // Unlock it and apply the heat load instead
+            node.is_fixed_temperature = false;
+            node.node_temperature = new_temp; 
+            node.applyHeatLoad(new_load);     
+        }
+    }
+    else if (m_currently_editing_edge != -1)
+    {
+        ThermalEdge& edge = m_active_network.network_edges[m_currently_editing_edge];
         
-        // If they explicitly change the temp, let's fix it as a boundary condition!
-        node.fixTemperature(new_temp); 
+        double new_res;
+        if (m_res_input->GetValue().ToDouble(&new_res)) {
+            // Assign directly -> stand in. TODO: CHANGE TO COMPLEX DROPDOWN
+            edge.params = PureResistance{new_res}; 
+        }
     }
-    
-    if (load_str.ToDouble(&new_load)) {
-        node.applyHeatLoad(new_load);
-    }
-
-    if (m_is_fixed_checkbox->GetValue()) {
-        // This helper safely sets is_fixed_temp to true and load to 0
-        node.fixTemperature(new_temp); 
-    } else {
-        // Unlock it and apply the heat load instead
-        node.is_fixed_temperature = false;
-        node.node_temperature = new_temp; 
-        node.applyHeatLoad(new_load);     
-    }
-
     // Tell the canvas to redraw with the new numbers
     m_canvas->Refresh();
 }
