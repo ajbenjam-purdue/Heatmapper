@@ -8,7 +8,11 @@
 enum {
     ID_RunSteadyState = wxID_HIGHEST + 1,
     ID_RunTransient = wxID_HIGHEST + 2,
-    ID_ApplyProperties = wxID_HIGHEST + 3
+    ID_ApplyProperties = wxID_HIGHEST + 3,
+    ID_ToolSelect = wxID_HIGHEST + 4,
+    ID_ToolNode = wxID_HIGHEST + 5,
+    ID_ToolEdge = wxID_HIGHEST + 6,
+    ID_ToolDelete = wxID_HIGHEST + 7
 };
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -18,6 +22,10 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_BUTTON(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
+    EVT_TOOL(ID_ToolSelect, MainFrame::OnToolSelect)
+    EVT_TOOL(ID_ToolNode, MainFrame::OnToolSelect)
+    EVT_TOOL(ID_ToolEdge, MainFrame::OnToolSelect)
+    EVT_TOOL(ID_ToolDelete, MainFrame::OnToolSelect)
 wxEND_EVENT_TABLE()
 
 void MainFrame::OnRunSteadyState(wxCommandEvent& event) {
@@ -89,8 +97,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     // Connect them
     m_active_network.add_edge(ThermalEdge(0, 1, PureResistance{10.0}));
 
-    
-
     // Hand the network to the canvas
     m_canvas->SetNetwork(&m_active_network);
 
@@ -109,6 +115,14 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     menuBar->Append(menuFile, "&File");
     menuBar->Append(menuRun, "&Run");
     SetMenuBar(menuBar);
+
+    // Toolbar
+    wxToolBar* toolBar = CreateToolBar();
+    toolBar->AddRadioTool(ID_ToolSelect, "Select", wxArtProvider::GetBitmap(wxART_NORMAL_FILE));
+    toolBar->AddRadioTool(ID_ToolNode, "Add Node", wxArtProvider::GetBitmap(wxART_PLUS));
+    toolBar->AddRadioTool(ID_ToolEdge, "Add Edge", wxArtProvider::GetBitmap(wxART_GO_FORWARD));
+    toolBar->AddRadioTool(ID_ToolDelete, "Delete", wxArtProvider::GetBitmap(wxART_DELETE));
+    toolBar->Realize(); // Render
 }
 
 void MainFrame::OnSaveAs(wxCommandEvent& event) {
@@ -271,4 +285,11 @@ void MainFrame::OnApplyProperties(wxCommandEvent& event) {
     }
     // Tell the canvas to redraw with the new numbers
     m_canvas->Refresh();
+}
+
+void MainFrame::OnToolSelect(wxCommandEvent& event) {
+    if (event.GetId() == ID_ToolSelect) m_canvas->SetToolMode(ToolMode::SELECT);
+    else if (event.GetId() == ID_ToolNode) m_canvas->SetToolMode(ToolMode::ADD_NODE);
+    else if (event.GetId() == ID_ToolEdge) m_canvas->SetToolMode(ToolMode::ADD_EDGE);
+    else if (event.GetId() == ID_ToolDelete) m_canvas->SetToolMode(ToolMode::DELETE_ITEM);
 }

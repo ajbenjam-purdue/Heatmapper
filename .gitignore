@@ -18,6 +18,7 @@ bin/
 
 # OS-specific hidden files
 .DS_Store
+**/.DS_Store
 Thumbs.db
 
 # Binaries

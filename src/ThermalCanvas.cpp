@@ -84,7 +84,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     gc->SetFont(wxFontInfo(10).Family(wxFONTFAMILY_SWISS), wxColour(255, 255, 255));
 
     // NODE LOOP
-    for (const auto& [id, node] : m_network->network_nodes)
+    for (const auto &[id, node] : m_network->network_nodes)
     {
 
         // Node position
@@ -108,18 +108,20 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
             gc->StrokeLine(tip_x, tip_y - 15, tip_x, tip_y);
 
             // Draw the left and right arrow heads
-            if (node.ext_load > 0.0) {
+            if (node.ext_load > 0.0)
+            {
                 gc->StrokeLine(tip_x, tip_y, tip_x - 5, tip_y - 5);
                 gc->StrokeLine(tip_x, tip_y, tip_x + 5, tip_y - 5);
             }
-            else {
-                gc->StrokeLine(tip_x, tip_y-15, tip_x - 5, tip_y - 10);
-                gc->StrokeLine(tip_x, tip_y-15, tip_x + 5, tip_y - 10);
+            else
+            {
+                gc->StrokeLine(tip_x, tip_y - 15, tip_x - 5, tip_y - 10);
+                gc->StrokeLine(tip_x, tip_y - 15, tip_x + 5, tip_y - 10);
             }
         }
 
         // Node color
-        if (max_node_temperature == min_node_temperature)
+        if (std::abs(max_node_temperature-min_node_temperature) < 0.01)
         {
             gc->SetBrush(wxBrush(wxColour(50, 120, 200)));
             gc->SetPen(wxPen(wxColour(30, 100, 180)));
@@ -160,42 +162,182 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
     int width, height;
     GetClientSize(&width, &height);
 
-    // Get the mouse click coordinates
+    // Get the mouse click coordinates (And normalize them)
     wxPoint mouse_pos = event.GetPosition();
+    double norm_x = ((double)mouse_pos.x - CANVAS_MARGIN) / (width - CANVAS_MARGIN * 2);
+    double norm_y = ((double)mouse_pos.y - CANVAS_MARGIN) / (height - CANVAS_MARGIN * 2);
+    norm_x = std::clamp(norm_x, 0.0, 1.0);
+    norm_y = std::clamp(norm_y, 0.0, 1.0);
 
     // Reset selections
     m_sel_node_id = -1;
-    m_sel_edge_index = -1; 
+    m_sel_edge_index = -1;
 
-    for (auto const& [id, node] : m_network->network_nodes)
+    // Switch for tools
+    switch (m_current_tool)
     {
-        // Calculate screen coordinates of this node
-        double node_x = node.canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-        double node_y = node.canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-
-        // distance to node
-        double dx = mouse_pos.x - node_x;
-        double dy = mouse_pos.y - node_y;
-        double distance = std::sqrt((dx * dx) + (dy * dy));
-
-        // Is the click inside the radius?
-        if (distance <= NODE_RADIUS)
+    case ToolMode::SELECT:
+    {
+        for (auto const &[id, node] : m_network->network_nodes)
         {
-            m_sel_node_id = node.node_id;
-            m_is_dragging = true;
+            // Calculate screen coordinates of this node
+            double node_x = node.canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+            double node_y = node.canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
 
+            // distance to node
+            double dx = mouse_pos.x - node_x;
+            double dy = mouse_pos.y - node_y;
+            double distance = std::sqrt((dx * dx) + (dy * dy));
 
-            // Update UI
-            ((MainFrame *)GetParent())->ShowNodeProperties(node.node_id);
+            // Is the click inside the radius?
+            if (distance <= NODE_RADIUS)
+            {
+                m_sel_node_id = node.node_id;
+                m_is_dragging = true;
 
+                // Update UI
+                ((MainFrame *)GetParent())->ShowNodeProperties(node.node_id);
 
-            break; // Stop checking, node located
+                break; // Stop checking, node located
+            }
         }
-    }
 
-    // Node still not found. Check for edge
-    if (m_sel_node_id == -1)
+        // Node still not found. Check for edge
+        if (m_sel_node_id == -1)
+        {
+            for (size_t i = 0; i < m_network->network_edges.size(); i++)
+            {
+                const ThermalEdge &edge = m_network->network_edges[i];
+
+                // Convert everything to screen px
+                double edge_x_1 = m_network->network_nodes[edge.id_0].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+                double edge_y_1 = m_network->network_nodes[edge.id_0].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+                double edge_x_2 = m_network->network_nodes[edge.id_1].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+                double edge_y_2 = m_network->network_nodes[edge.id_1].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+
+                // Check first if bounding box criteria is met
+                if (in_bounding_box(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) && distance_perpendicular(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) <= EDGE_SELECTION_TOLERANCE)
+                {
+                    m_sel_edge_index = i; // Set selected edge
+
+                    // Update UI
+                    ((MainFrame *)GetParent())->ShowEdgeProperties(i);
+
+                    break;
+                }
+            }
+        }
+        break;
+    }
+    case ToolMode::ADD_NODE:
     {
+        // Create a node with default parameters and add to network
+        ThermalNode new_node(norm_x, norm_y, 1.0, 500.0, "New Node", 0, 15.0);
+        m_network->add_node(new_node);
+
+        // If user is pressing shift, multi add. Otherwise, edit properties
+        if (!event.ShiftDown())
+        {
+            SetToolMode(ToolMode::SELECT);
+            m_sel_node_id = new_node.node_id;
+            ((MainFrame *)GetParent())->ShowNodeProperties(new_node.node_id);
+        }
+        break;
+    }
+    case ToolMode::ADD_EDGE:
+    {
+        // Add edge between two nodes
+
+        // Get node hit (if any)
+        int clicked_node_id = -1;
+        for (const auto &[id, node] : m_network->network_nodes)
+        {
+            // Calculate screen coordinates of this node
+            double node_x = node.canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+            double node_y = node.canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+
+            // distance to node
+            double dx = mouse_pos.x - node_x;
+            double dy = mouse_pos.y - node_y;
+            double distance = std::sqrt((dx * dx) + (dy * dy));
+
+            // Is the click inside the radius?
+            if (distance <= NODE_RADIUS)
+            {
+                clicked_node_id = id;
+
+                break; // Stop checking, node located
+            }
+        }
+
+        // Good hit
+        if (clicked_node_id != -1)
+        {
+            if (m_first_edge_node == -1) // First instance, remember
+            {
+                m_first_edge_node = clicked_node_id;
+            }
+            else if (m_first_edge_node != clicked_node_id) // Already have a first node (valid)
+            {
+                m_network->add_edge(ThermalEdge(m_first_edge_node, clicked_node_id, PureResistance{10.0}));
+                m_first_edge_node = -1;
+            }
+            else // Have a first node but it's the same. just reset
+            {
+                m_first_edge_node = -1;
+            }
+        }
+        break;
+    }
+    case ToolMode::DELETE_ITEM:
+    {
+        // Delete node
+
+        // Get node hit (if any)
+        int clicked_node_id = -1;
+        for (const auto &[id, node] : m_network->network_nodes)
+        {
+            // Calculate screen coordinates of this node
+            double node_x = node.canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+            double node_y = node.canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+
+            // distance to node
+            double dx = mouse_pos.x - node_x;
+            double dy = mouse_pos.y - node_y;
+            double distance = std::sqrt((dx * dx) + (dy * dy));
+
+            // Is the click inside the radius?
+            if (distance <= NODE_RADIUS)
+            {
+                clicked_node_id = id;
+
+                break; // Stop checking, node located
+            }
+        }
+
+        if (clicked_node_id != -1)
+        {
+            m_network->network_nodes.erase(clicked_node_id); // Delete node
+
+            // Clear out all associated edges (Thank you Gemini for the concise code. Beats my implementation)
+            m_network->network_edges.erase(
+                std::remove_if(m_network->network_edges.begin(), m_network->network_edges.end(),
+                               [clicked_node_id](const ThermalEdge &e)
+                               {
+                                   return e.id_0 == clicked_node_id || e.id_1 == clicked_node_id;
+                               }),
+                m_network->network_edges.end());
+
+            // Clear UI if the deleted node was selected
+            if (m_sel_node_id == clicked_node_id)
+            {
+                m_sel_node_id = -1;
+                ((MainFrame *)GetParent())->ShowNodeProperties(-1);
+            }
+            break; // No need to check edges
+        }
+
+        // Now check for edges
         for (size_t i = 0; i < m_network->network_edges.size(); i++)
         {
             const ThermalEdge &edge = m_network->network_edges[i];
@@ -209,16 +351,18 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
             // Check first if bounding box criteria is met
             if (in_bounding_box(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) && distance_perpendicular(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) <= EDGE_SELECTION_TOLERANCE)
             {
-                m_sel_edge_index = i; // Set selected edge
-
-                // Update UI
-                ((MainFrame *)GetParent())->ShowEdgeProperties(i);
+                // Vaporize edge and exit loop
+                m_network->network_edges.erase(m_network->network_edges.begin() + i);
 
                 break;
             }
         }
+
+        break;
     }
-    Refresh(); // Redraw to show selection highlight, exit out
+    }
+
+    Refresh(); // Redraw
 }
 
 void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
@@ -248,12 +392,12 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
         // ThermalNode& drag_node = m_network->network_nodes[m_sel_node_id];
         SNAP_X = -1;
         SNAP_Y = -1;
-        for (const auto& [id, node] : m_network->network_nodes)
+        for (const auto &[id, node] : m_network->network_nodes)
         {
             if (node.node_id == m_sel_node_id)
                 continue;
-            
-            if (std::abs(node.canvas_position_x-new_norm_x) < SNAP_MARGIN)
+
+            if (std::abs(node.canvas_position_x - new_norm_x) * (width - 2 * CANVAS_MARGIN) < SNAP_MARGIN)
             {
                 // Snap to first match
                 SNAP_X = node.canvas_position_x;
@@ -261,12 +405,12 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
                 break;
             }
         }
-        for (const auto& [id, node] : m_network->network_nodes)
+        for (const auto &[id, node] : m_network->network_nodes)
         {
             if (node.node_id == m_sel_node_id)
                 continue;
-            
-            if (std::abs(node.canvas_position_y-new_norm_y) < SNAP_MARGIN)
+
+            if (std::abs(node.canvas_position_y - new_norm_y) * (height - 2 * CANVAS_MARGIN) < SNAP_MARGIN)
             {
                 // Snap to first match
                 SNAP_Y = node.canvas_position_y;
@@ -289,5 +433,12 @@ void ThermalCanvas::OnMouseLeftUp(wxMouseEvent &event)
     m_is_dragging = false;
     SNAP_X = -1;
     SNAP_Y = -1;
+    Refresh();
+}
+
+void ThermalCanvas::SetToolMode(ToolMode mode)
+{
+    m_current_tool = mode;
+    m_first_edge_node = -1; // Always reset edge memory when switching tools
     Refresh();
 }
