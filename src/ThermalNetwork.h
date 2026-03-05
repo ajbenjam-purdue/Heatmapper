@@ -25,7 +25,7 @@ class ThermalNetwork {
     ThermalNetwork(std::string label);
 
     // Create and assign node(s)
-    void add_node(ThermalNode node);
+    int add_node(ThermalNode node);
 
     void add_nodes(std::vector<ThermalNode> nodes);
 

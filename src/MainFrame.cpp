@@ -4,6 +4,10 @@
 #include <fstream>
 #include "json.hpp"
 
+#if defined(__WXMSW__)
+#pragma comment(linker, "\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+
 // Map the events
 enum {
     ID_RunSteadyState = wxID_HIGHEST + 1,
@@ -45,6 +49,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         : wxFrame(NULL, wxID_ANY, title, pos, size), 
           m_active_network("Workspace Network") { // Initialize the empty network
     
+    #if defined(__WXMSW__)
+        SetIcon(wxICON(AppIcon));
+    #endif
     // Build the Canvas
     m_canvas = new ThermalCanvas(this);
 
@@ -292,4 +299,9 @@ void MainFrame::OnToolSelect(wxCommandEvent& event) {
     else if (event.GetId() == ID_ToolNode) m_canvas->SetToolMode(ToolMode::ADD_NODE);
     else if (event.GetId() == ID_ToolEdge) m_canvas->SetToolMode(ToolMode::ADD_EDGE);
     else if (event.GetId() == ID_ToolDelete) m_canvas->SetToolMode(ToolMode::DELETE_ITEM);
+}
+
+void MainFrame::ForceSelectTool() {
+    GetToolBar()->ToggleTool(ID_ToolSelect, true); // Visually press the button
+    m_canvas->SetToolMode(ToolMode::SELECT);       // Update the canvas
 }

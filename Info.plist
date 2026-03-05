@@ -8,6 +8,8 @@
     <string>com.ajbenjam.Heatmapper</string>
     <key>CFBundleName</key>
     <string>Heat Mapper</string>
+    <key>CFBundleIconFile</key>
+    <string>icon.icns</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

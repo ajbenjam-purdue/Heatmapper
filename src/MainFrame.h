@@ -10,6 +10,7 @@ public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
     void ShowNodeProperties(int node_id);
     void ShowEdgeProperties(int edge_index);
+    void ForceSelectTool();
 
 private:
 

@@ -26,11 +26,14 @@ ThermalNetwork::ThermalNetwork(std::string label)
 }
 
 // Add node, update network
-void ThermalNetwork::add_node(ThermalNode node)
+int ThermalNetwork::add_node(ThermalNode node)
 {
-    node.node_id = next_node_id;
-    network_nodes[next_node_id] = node;
-    next_node_id++;
+    // Rework to prevent deletion crash
+    int assigned_id = next_node_id++;
+    ThermalNode n = node;
+    n.node_id = assigned_id;
+    network_nodes[assigned_id] = n;
+    return assigned_id;
 }
 
 // Add nodes, update network

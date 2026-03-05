@@ -169,15 +169,15 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
     norm_x = std::clamp(norm_x, 0.0, 1.0);
     norm_y = std::clamp(norm_y, 0.0, 1.0);
 
-    // Reset selections
-    m_sel_node_id = -1;
-    m_sel_edge_index = -1;
-
     // Switch for tools
     switch (m_current_tool)
     {
     case ToolMode::SELECT:
     {
+        // Reset selections
+        m_sel_node_id = -1;
+        m_sel_edge_index = -1;
+
         for (auto const &[id, node] : m_network->network_nodes)
         {
             // Calculate screen coordinates of this node
@@ -227,19 +227,25 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
                 }
             }
         }
+
+        // No hits, show nothing
+        if (m_sel_node_id == -1 && m_sel_edge_index == -1) {
+            ((MainFrame*)GetParent())->ShowNodeProperties(-1);
+        }
+
         break;
     }
     case ToolMode::ADD_NODE:
     {
         // Create a node with default parameters and add to network
         ThermalNode new_node(norm_x, norm_y, 1.0, 500.0, "New Node", 0, 15.0);
-        m_network->add_node(new_node);
+        int new_node_id = m_network->add_node(new_node);
 
         // If user is pressing shift, multi add. Otherwise, edit properties
         if (!event.ShiftDown())
         {
-            SetToolMode(ToolMode::SELECT);
-            m_sel_node_id = new_node.node_id;
+            ((MainFrame*)GetParent())->ForceSelectTool(); // Override selection
+            m_sel_node_id = new_node_id;
             ((MainFrame *)GetParent())->ShowNodeProperties(new_node.node_id);
         }
         break;
