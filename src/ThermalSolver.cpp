@@ -4,6 +4,17 @@
 void ThermalSolver::solveSteadyState(ThermalNetwork &network)
 {
     int N = network.get_node_count(); // Count of nodes in the network
+    if (N == 0) // No nodes
+        return;
+
+    // Map to map the unordered map to matrices
+    std::unordered_map<int, int> id_to_index;
+    int current_row = 0;
+
+    for (const auto& [node_id, node] : network.network_nodes) {
+        id_to_index[node_id] = current_row;
+        current_row++;
+    }
 
     Eigen::MatrixXd K = Eigen::MatrixXd::Zero(N, N); // N x N Conductivity matrix
     Eigen::VectorXd Q = Eigen::VectorXd::Zero(N);    // N-length Heat Vector
@@ -11,30 +22,36 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network)
     // Loop through each edge, calculating conductance
     for (ThermalEdge edge : network.network_edges)
     {
-        double edge_conductance = 1.0 / edge.resistance();
+        int idx_0 = id_to_index[edge.id_0];
+        int idx_1 = id_to_index[edge.id_1];
+        
+        // Calculate conductance
+        double cond = 1.0 / std::get<PureResistance>(edge.params).R;
 
-        // Self-conductance
-        K(edge.id_0, edge.id_0) += edge_conductance;
-        K(edge.id_1, edge.id_1) += edge_conductance;
-
-        // Cross-conductance
-        K(edge.id_0, edge.id_1) -= edge_conductance;
-        K(edge.id_1, edge.id_0) -= edge_conductance;
+        // Populate K using the translated indices
+        K(idx_0, idx_0) += cond;
+        K(idx_1, idx_1) += cond;
+        K(idx_0, idx_1) -= cond;
+        K(idx_1, idx_0) -= cond;
     }
 
     // Loop through each node to apply boundary conditions
-    for (ThermalNode node : network.network_nodes)
+    for (auto const [id, node] : network.network_nodes)
     {
+        // Translation
+        int idx = id_to_index[id];
+
         // BC check
-        if (node.is_fixed_temperature)
+        if (node.is_fixed_temperature) // Fixed temperature
         {
             // Fixed temperature, apply gigantic apparent load to both the heat vector and conductivity matrix
-            K(node.node_id, node.node_id) += 1.0e10;
-            Q(node.node_id) = 1.0e10 * node.node_temperature;
+            K.row(idx).setZero();
+            K(idx, idx) = 1.0;
+            Q(idx) = node.node_temperature;
         }
-        else if (node.ext_load != 0.0)
+        else if (node.ext_load != 0.0) // External load
         {
-            Q(node.node_id) = node.ext_load;
+            Q(idx) = node.ext_load;
         }
     }
 
@@ -45,7 +62,17 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network)
     std::cout << "Solution found in " << std::chrono::duration<double, std::micro>(solve_complete - solve_start) << std::endl;
 
     // Write solution to network's nodes
-    network.apply_temperatures(std::vector<double>(T.data(), T.data() + T.size()));
+    //network.apply_temperatures(std::vector<double>(T.data(), T.data() + T.size()));
+    // Workaround for unordered map
+    for (auto& [node_id, node] : network.network_nodes) {
+        if (!node.is_fixed_temperature) {
+            int idx = id_to_index[node_id]; // Translate!
+            
+            // Read the calculated temp from the Eigen vector
+            // and save it permanently to the node object
+            node.node_temperature = T(idx); 
+        }
+    }
 }
 
 void ThermalSolver::runSimulation(ThermalNetwork &network, const SimulationConfig &config)
@@ -73,7 +100,7 @@ void ThermalSolver::runSimulation(ThermalNetwork &network, const SimulationConfi
     }
 
     // Loop through each node to apply boundary conditions
-    for (ThermalNode node : network.network_nodes)
+    for (auto const [id, node] : network.network_nodes)
     {
         // BC check
         if (node.is_fixed_temperature)

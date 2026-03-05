@@ -8,15 +8,21 @@ public:
     const static int CANVAS_MARGIN = 20; // pixels, on each side
     const static int EDGE_SELECTION_TOLERANCE = 12; // pixels away for valid hit
     const static float constexpr NODE_RADIUS = 10.0; // pixels
+    const static float constexpr SNAP_MARGIN = 0.01; // portion
 
     const wxColour COLOR_UNKNOWN = wxColour(120, 120, 140); // Color for nodes with unknown values
     const wxColour COLOR_SELECT = wxColour(215, 200, 0); // Color for actively selected node/edge
     const wxColour COLOR_DESELECT = wxColour(150, 150, 150);
+    const wxColour COLOR_GUIDE = wxColour(90, 90, 95); // Color for guidelines
 
     // State
-    int m_sel_node_index = -1;
+    int m_sel_node_id = -1;
     int m_sel_edge_index = -1;
     bool m_is_dragging = false;
+
+    //Snapping
+    double SNAP_X = -1.0; // Init and held at -1 unless real coords exist. 
+    double SNAP_Y = -1.0; // Relative (0-1)
 
     // Interaction
     void OnMouseLeftDown(wxMouseEvent& event);

@@ -28,3 +28,6 @@ Thumbs.db
 
 # Code
 .vscode
+.DS_Store
+build/Heatmapper.app/Contents/MacOS/Heatmapper
+/build/Heatmapper.app

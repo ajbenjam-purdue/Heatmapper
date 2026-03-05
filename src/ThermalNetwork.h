@@ -12,9 +12,9 @@ class ThermalNetwork {
     public:
 
     // Init member nodes & edges
-    std::vector<ThermalNode> network_nodes;
+    std::unordered_map<int, ThermalNode> network_nodes;
     std::vector<ThermalEdge> network_edges;
-    std::vector<int> network_node_ids;
+    int next_node_id = 0;
 
     std::string network_label;
 

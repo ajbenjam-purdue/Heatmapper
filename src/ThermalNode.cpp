@@ -24,8 +24,6 @@ ThermalNode::ThermalNode(double position_x, double position_y, double mass, doub
     property_label = label;
     node_id = id;
     node_temperature = temperature;
-
-    // std::cout << "Created thermal node" << std::endl;
 }
 
 // Override Properties

@@ -7,7 +7,7 @@ class ThermalCanvas; // Fwd declaration
 class MainFrame : public wxFrame {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-    void ShowNodeProperties(int node_index);
+    void ShowNodeProperties(int node_id);
     void ShowEdgeProperties(int edge_index);
 
 private:

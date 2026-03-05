@@ -162,8 +162,8 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
     }
 }
 
-void MainFrame::ShowNodeProperties(int node_index) {
-    m_currently_editing_node = node_index;
+void MainFrame::ShowNodeProperties(int node_id) {
+    m_currently_editing_node = node_id;
     m_currently_editing_edge = -1;
 
     // Hide all relevant info for edge properties + show all relevant info for node properties
@@ -176,7 +176,7 @@ void MainFrame::ShowNodeProperties(int node_index) {
     m_res_input->Hide();
     m_thermal_res_label->Hide();
 
-    if (node_index == -1) {
+    if (node_id == -1) {
         m_node_label->SetLabel("Select a node...");
         m_temp_input->Clear();
         m_load_input->Clear();
@@ -185,9 +185,9 @@ void MainFrame::ShowNodeProperties(int node_index) {
     }
 
     // Grab the node and populate the text boxes
-    ThermalNode& node = m_active_network.network_nodes[node_index];
+    ThermalNode& node = m_active_network.network_nodes[node_id];
     
-    m_node_label->SetLabel(wxString::Format("Editing Node %d", node_index));
+    m_node_label->SetLabel(wxString::Format("Editing Node %d", node_id));
     m_temp_input->SetValue(wxString::Format("%.2f", node.node_temperature));
     m_load_input->SetValue(wxString::Format("%.2f", node.ext_load));
     m_is_fixed_checkbox->SetValue(node.is_fixed_temperature);

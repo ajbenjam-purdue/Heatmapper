@@ -35,6 +35,20 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     int width, height;
     GetClientSize(&width, &height);
 
+    // Draw snapping guides
+    gc->SetPen(wxPen(COLOR_GUIDE, 2));
+
+    if (SNAP_X != -1.0)
+    {
+        double guideline_x = SNAP_X * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+        gc->StrokeLine(guideline_x, 0, guideline_x, height);
+    }
+    if (SNAP_Y != -1.0)
+    {
+        double guideline_y = SNAP_Y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+        gc->StrokeLine(0, guideline_y, width, guideline_y);
+    }
+
     // Draw edges, then nodes
     gc->SetPen(wxPen(wxColour(150, 150, 150), 3));
 
@@ -70,7 +84,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     gc->SetFont(wxFontInfo(10).Family(wxFONTFAMILY_SWISS), wxColour(255, 255, 255));
 
     // NODE LOOP
-    for (const ThermalNode &node : m_network->network_nodes)
+    for (const auto& [id, node] : m_network->network_nodes)
     {
 
         // Node position
@@ -118,7 +132,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         }
 
         // Selection pen
-        if (node.node_id == m_sel_node_index)
+        if (node.node_id == m_sel_node_id)
         {
             gc->SetPen(wxPen(COLOR_SELECT, 3)); // Thick yellow pen
         }
@@ -150,13 +164,11 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
     wxPoint mouse_pos = event.GetPosition();
 
     // Reset selections
-    m_sel_node_index = -1;
+    m_sel_node_id = -1;
     m_sel_edge_index = -1; 
 
-    for (size_t i = 0; i < m_network->network_nodes.size(); i++)
+    for (auto const& [id, node] : m_network->network_nodes)
     {
-        const ThermalNode &node = m_network->network_nodes[i];
-
         // Calculate screen coordinates of this node
         double node_x = node.canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
         double node_y = node.canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
@@ -169,12 +181,12 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
         // Is the click inside the radius?
         if (distance <= NODE_RADIUS)
         {
-            m_sel_node_index = i;
+            m_sel_node_id = node.node_id;
             m_is_dragging = true;
 
 
             // Update UI
-            ((MainFrame *)GetParent())->ShowNodeProperties(i);
+            ((MainFrame *)GetParent())->ShowNodeProperties(node.node_id);
 
 
             break; // Stop checking, node located
@@ -182,7 +194,7 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
     }
 
     // Node still not found. Check for edge
-    if (m_sel_node_index == -1)
+    if (m_sel_node_id == -1)
     {
         for (size_t i = 0; i < m_network->network_edges.size(); i++)
         {
@@ -211,7 +223,8 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
 
 void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
 {
-    if (m_is_dragging && m_sel_node_index != -1 && m_network)
+    // Check for dragging mouse with valid node & a valid network
+    if (m_is_dragging && m_sel_node_id != -1 && m_network)
     {
 
         int width, height;
@@ -231,9 +244,40 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
         new_norm_x = std::clamp(new_norm_x, 0.0, 1.0);
         new_norm_y = std::clamp(new_norm_y, 0.0, 1.0);
 
+        // Loop through all nodes to find (first) x snaps and (second) y snaps
+        // ThermalNode& drag_node = m_network->network_nodes[m_sel_node_id];
+        SNAP_X = -1;
+        SNAP_Y = -1;
+        for (const auto& [id, node] : m_network->network_nodes)
+        {
+            if (node.node_id == m_sel_node_id)
+                continue;
+            
+            if (std::abs(node.canvas_position_x-new_norm_x) < SNAP_MARGIN)
+            {
+                // Snap to first match
+                SNAP_X = node.canvas_position_x;
+                new_norm_x = node.canvas_position_x;
+                break;
+            }
+        }
+        for (const auto& [id, node] : m_network->network_nodes)
+        {
+            if (node.node_id == m_sel_node_id)
+                continue;
+            
+            if (std::abs(node.canvas_position_y-new_norm_y) < SNAP_MARGIN)
+            {
+                // Snap to first match
+                SNAP_Y = node.canvas_position_y;
+                new_norm_y = node.canvas_position_y;
+                break;
+            }
+        }
+
         // Update the actual network data
-        m_network->network_nodes[m_sel_node_index].canvas_position_x = new_norm_x;
-        m_network->network_nodes[m_sel_node_index].canvas_position_y = new_norm_y;
+        m_network->network_nodes[m_sel_node_id].canvas_position_x = new_norm_x;
+        m_network->network_nodes[m_sel_node_id].canvas_position_y = new_norm_y;
 
         // Redraw to make the node follow the cursor
         Refresh();
@@ -243,4 +287,7 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
 void ThermalCanvas::OnMouseLeftUp(wxMouseEvent &event)
 {
     m_is_dragging = false;
+    SNAP_X = -1;
+    SNAP_Y = -1;
+    Refresh();
 }

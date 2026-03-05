@@ -4,16 +4,17 @@
 
 // Pre-populated network
 ThermalNetwork::ThermalNetwork(std::vector<ThermalNode> nodes, std::vector<ThermalEdge> edges, std::string label)
-    : network_nodes(nodes),
-      network_edges(edges),
+    : network_edges(edges),
       network_label(label)
 {
 
     // Populate nodes vector
     for (size_t i = 0; i < nodes.size(); i++)
     {
-        network_node_ids.push_back(network_nodes.at(i).node_id);
+        network_nodes[next_node_id] = nodes.at(i);
+        next_node_id++;
     }
+    
     std::cout << "Created network \"" << label << "\" with nodes and vectors" << std::endl;
 }
 
@@ -27,8 +28,9 @@ ThermalNetwork::ThermalNetwork(std::string label)
 // Add node, update network
 void ThermalNetwork::add_node(ThermalNode node)
 {
-    network_nodes.push_back(node);
-    network_node_ids.push_back(node.node_id);
+    node.node_id = next_node_id;
+    network_nodes[next_node_id] = node;
+    next_node_id++;
 }
 
 // Add nodes, update network
@@ -36,8 +38,9 @@ void ThermalNetwork::add_nodes(std::vector<ThermalNode> nodes)
 {
     for (size_t i = 0; i < nodes.size(); i++)
     {
-        network_nodes.push_back(nodes.at(i));
-        network_node_ids.push_back(nodes.at(i).node_id);
+        nodes.at(i).node_id = next_node_id;
+        network_nodes[next_node_id] = nodes.at(i);
+        next_node_id++;
     }
 }
 
@@ -45,7 +48,7 @@ void ThermalNetwork::add_nodes(std::vector<ThermalNode> nodes)
 void ThermalNetwork::add_edge(ThermalEdge edge)
 {
     // Check for both ids present
-    if (std::count(network_node_ids.begin(), network_node_ids.end(), edge.id_0) > 0 && std::count(network_node_ids.begin(), network_node_ids.end(), edge.id_1) > 0)
+    if (network_nodes.count(edge.id_0) > 0 && network_nodes.count(edge.id_1) > 0)
     {
         // Both present, add edge
         network_edges.push_back(edge);
@@ -63,7 +66,7 @@ void ThermalNetwork::add_edges(std::vector<ThermalEdge> edges)
     for (size_t i = 0; i < edges.size(); i++)
     {
         // Check for both ids present
-        if (std::count(network_node_ids.begin(), network_node_ids.end(), edges.at(i).id_0) > 0 && std::count(network_node_ids.begin(), network_node_ids.end(), edges.at(i).id_1) > 0)
+        if (network_nodes.count(edges.at(i).id_0) > 0 && network_nodes.count(edges.at(i).id_1) > 0)
         {
             // Both present, add edge
             network_edges.push_back(edges.at(i));
@@ -95,7 +98,7 @@ json ThermalNetwork::to_json() const {
     
     // Order nodes
     j["nodes"] = json::array(); // explicitly create an array
-    for (const ThermalNode& node : network_nodes) {
+    for (auto const& [id, node] : network_nodes) {
         j["nodes"].push_back({
             {"id", node.node_id},
             {"x", node.canvas_position_x},
@@ -185,9 +188,9 @@ double ThermalNetwork::highest_node_temperature()
     
     // Network has at least one element
     double res = network_nodes.at(0).node_temperature; // Initialize to first node temperature
-    for (size_t i = 1; i < network_nodes.size(); i++)
+    for (auto const& [id, node] : network_nodes)
     {
-        res = std::max(res, network_nodes.at(i).node_temperature);
+        res = std::max(res, node.node_temperature);
     }
     return res;
 }
@@ -200,9 +203,9 @@ double ThermalNetwork::lowest_node_temperature()
     
     // Network has at least one element
     double res = network_nodes.at(0).node_temperature; // Initialize to first node temperature
-    for (size_t i = 1; i < network_nodes.size(); i++)
+    for (auto const& [id, node] : network_nodes)
     {
-        res = std::min(res, network_nodes.at(i).node_temperature);
+        res = std::min(res, node.node_temperature);
     }
     return res;
 }
@@ -211,7 +214,7 @@ double ThermalNetwork::lowest_node_temperature()
 int ThermalNetwork::nodes_with_temperature_fix()
 {
     int res = 0;
-    for (ThermalNode &node : network_nodes)
+    for (auto const& [id, node] : network_nodes)
     {
         res += (node.is_fixed_temperature ? 1 : 0);
     }
@@ -222,7 +225,7 @@ int ThermalNetwork::nodes_with_temperature_fix()
 int ThermalNetwork::nodes_with_flux_fix() 
 {
     int res = 0;
-    for (ThermalNode &node : network_nodes)
+    for (auto const& [id, node] : network_nodes)
     {
         res += (node.ext_load != 0.0 ? 1 : 0);
     }
