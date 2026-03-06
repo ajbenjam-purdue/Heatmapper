@@ -9,6 +9,7 @@ class MainFrame : public wxFrame {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
     void ShowNodeProperties(int node_id);
+    void ResetPropertiesWindow();
     void ShowEdgeProperties(int edge_index);
     void ForceSelectTool();
 
@@ -20,6 +21,9 @@ private:
     wxTextCtrl* m_load_input; // What the input load is (W)
 
     wxTextCtrl* m_res_input; // What the edge resistance should be
+
+    wxStaticText* m_flow_disp_label; // Label for edge's measured heat flux
+    wxTextCtrl* m_flow_disp; // Actual number
 
     wxButton* m_apply_button; // Apply button
 

@@ -36,7 +36,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     GetClientSize(&width, &height);
 
     // Draw snapping guides
-    gc->SetPen(wxPen(COLOR_GUIDE, 2));
+    gc->SetPen(wxPen(COLOR_GUIDE, 1));
 
     if (SNAP_X != -1.0)
     {
@@ -230,6 +230,8 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
 
         // No hits, show nothing
         if (m_sel_node_id == -1 && m_sel_edge_index == -1) {
+            // Reset the show node properties
+            ((MainFrame*)GetParent())->ResetPropertiesWindow();
             ((MainFrame*)GetParent())->ShowNodeProperties(-1);
         }
 

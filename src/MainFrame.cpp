@@ -49,9 +49,12 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         : wxFrame(NULL, wxID_ANY, title, pos, size), 
           m_active_network("Workspace Network") { // Initialize the empty network
     
+
+    // Windows application icon
     #if defined(__WXMSW__)
         SetIcon(wxICON(AppIcon));
     #endif
+
     // Build the Canvas
     m_canvas = new ThermalCanvas(this);
 
@@ -81,6 +84,12 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     m_res_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
     properties_sizer->Add(m_res_input, 0, wxALL | wxEXPAND, 5);
 
+    m_flow_disp_label = new wxStaticText(properties_panel, wxID_ANY, "Calculated Heat Flow (W):");
+    properties_sizer->Add(m_flow_disp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_flow_disp = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    m_flow_disp->Disable();
+    properties_sizer->Add(m_flow_disp, 0, wxALL | wxEXPAND, 5);
+
     // Give this button a new custom ID like ID_ApplyProperties
     m_apply_button = new wxButton(properties_panel, ID_ApplyProperties, "Apply Changes");
     properties_sizer->Add(m_apply_button, 0, wxALL | wxEXPAND, 5);
@@ -96,6 +105,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
     // Set the sizer for the main window
     SetSizer(sizer);
+
+    /// Reset so it doesn't show random data
+    ResetPropertiesWindow();
 
     // Populate the network with some test data 
     m_active_network.add_node(ThermalNode(0.25, 0.5, 1.0, 500.0, "Node A", 0));
@@ -183,27 +195,53 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
     }
 }
 
+void MainFrame::ResetPropertiesWindow() {
+    m_currently_editing_node = -1;
+    m_currently_editing_edge = -1;
+
+    // Hide everything
+    m_node_label->Hide();
+    m_temp_input->Hide();
+    m_temp_label->Hide();
+    m_is_fixed_checkbox->Hide();
+    m_load_input->Hide();
+    m_load_label->Hide();
+    m_res_input->Hide();
+    m_thermal_res_label->Hide();
+    m_flow_disp->Hide();
+    m_flow_disp_label->Hide();
+    m_apply_button->Hide();
+
+    this->Layout();
+}
+
 void MainFrame::ShowNodeProperties(int node_id) {
     m_currently_editing_node = node_id;
     m_currently_editing_edge = -1;
 
-    // Hide all relevant info for edge properties + show all relevant info for node properties
+    // If no node is selected, reset everything and just show the prompt
+    if (node_id == -1) {
+        ResetPropertiesWindow();
+        m_node_label->SetLabel("Select a node...");
+        m_node_label->Show();
+        this->Layout();
+        return;
+    }
+
+    // Otherwise, show the node properties!
     m_node_label->Show();
     m_temp_input->Show();
     m_temp_label->Show();
     m_is_fixed_checkbox->Show();
     m_load_input->Show();
     m_load_label->Show();
+    m_apply_button->Show();
+    
+    // Ensure edge properties stay hidden
     m_res_input->Hide();
     m_thermal_res_label->Hide();
-
-    if (node_id == -1) {
-        m_node_label->SetLabel("Select a node...");
-        m_temp_input->Clear();
-        m_load_input->Clear();
-        m_is_fixed_checkbox->SetValue(false);
-        return;
-    }
+    m_flow_disp->Hide();
+    m_flow_disp_label->Hide();
 
     // Grab the node and populate the text boxes
     ThermalNode& node = m_active_network.network_nodes[node_id];
@@ -221,27 +259,32 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
     m_currently_editing_edge = edge_index;
     m_currently_editing_node = -1;
 
-    // Hide all relevant info for node properties + show all relevant info for edge properties
+    // If no edge is selected, just clear the window
+    if (edge_index == -1) {
+        ResetPropertiesWindow();
+        return;
+    }
+
+    // Show edge properties
+    m_res_input->Show();
+    m_thermal_res_label->Show();
+    m_flow_disp->Show();
+    m_flow_disp_label->Show();
+    m_apply_button->Show();
+
+    // Ensure node properties stay hidden
     m_node_label->Hide();
     m_temp_label->Hide();
     m_temp_input->Hide();
     m_is_fixed_checkbox->Hide();
     m_load_input->Hide();
     m_load_label->Hide();
-    m_res_input->Show();
-    m_thermal_res_label->Show();
-
-
-    // No edge selected
-    if (edge_index == -1) {
-        m_res_input->Clear();
-        return;
-    }
 
     // Grab the edge and populate the text boxes
     ThermalEdge& edge = m_active_network.network_edges[edge_index];
     
     m_res_input->SetValue(wxString::Format("%.2f", edge.resistance()));
+    m_flow_disp->SetValue(wxString::Format("%.2f", m_active_network.get_edge_flux(edge_index)));
 
     this->Layout();
 }
