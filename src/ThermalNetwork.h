@@ -9,7 +9,7 @@
 using json = nlohmann::json;
 
 class ThermalNetwork {
-    public:
+public:
 
     // Init member nodes & edges
     std::unordered_map<int, ThermalNode> network_nodes;
@@ -53,4 +53,6 @@ class ThermalNetwork {
     int nodes_with_flux_fix(); // Count of nodes with an input/output flux
 
     double get_edge_flux(size_t id); // Gets the flux across an edge
+
+    bool has_edge(size_t id_0, size_t id_1); // Returns true if an edge exists between the two node ids
 };

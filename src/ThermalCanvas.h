@@ -29,6 +29,9 @@ public:
     //int m_sel_node_id = -1; Conversion for shift click
     int m_sel_edge_index = -1;
     bool m_is_dragging = false;
+    bool m_is_box_selecting = false;
+    wxPoint m_box_start;
+    wxPoint m_current_mouse_pos;
     wxPoint m_drag_start_mouse; 
     std::unordered_map<int, std::pair<double, double>> m_drag_start_nodes;
 

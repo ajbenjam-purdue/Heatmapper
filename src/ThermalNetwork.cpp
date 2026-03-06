@@ -243,3 +243,14 @@ double ThermalNetwork::get_edge_flux(size_t id)
     double resistance = network_edges[id].resistance();
     return (node_b.node_temperature - node_a.node_temperature) / resistance;
 }
+
+// True if a matching edge exists
+bool ThermalNetwork::has_edge(size_t id_0, size_t id_1)
+{
+    for (const ThermalEdge edge : network_edges)
+    {
+        if (std::min(edge.id_0, edge.id_1) == std::min(id_0, id_1) && std::max(edge.id_0, edge.id_1) == std::max(id_0, id_1))
+            return true;
+    }
+    return false;
+}
