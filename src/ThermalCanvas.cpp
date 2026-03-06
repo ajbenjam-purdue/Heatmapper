@@ -50,8 +50,6 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     }
 
     // Draw edges, then nodes
-    gc->SetPen(wxPen(wxColour(150, 150, 150), 3));
-
     for (size_t i = 0; i < m_network->network_edges.size(); i++)
     {
         // Find the two nodes this edge connects
@@ -64,14 +62,30 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         double x2 = n1.canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
         double y2 = n1.canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
 
+        gc->SetPen(wxPen(COLOR_EDGE_BACKDROP, 5));
+        gc->StrokeLine(x1, y1, x2, y2);
+
         if (i == m_sel_edge_index)
         {
             gc->SetPen(wxPen(COLOR_SELECT, 4)); // Thick yellow pen
         }
         else
-            gc->SetPen(wxPen(COLOR_DESELECT, 2));
+            gc->SetPen(wxPen(COLOR_EDGE, 3));
 
         gc->StrokeLine(x1, y1, x2, y2);
+        double edge_flux = m_network->get_edge_flux(i);
+        if (edge_flux != 0.0) // Flux exists, draw arrow
+        {
+            double arrow_amplitude = std::min(distance_cartesian(x1, y1, x2, y2) * 0.3 - 10, 10.0);
+            auto [cx, cy, dx, dy] = line_info(x1, y1, x2, y2); 
+            if (!std::signbit(edge_flux))
+            {
+                dx *= -1; dy *= -1;
+            }
+            gc->StrokeLine(cx-arrow_amplitude*dy, cy+arrow_amplitude*dx, cx+arrow_amplitude*dx, cy+arrow_amplitude*dy);
+            gc->StrokeLine(cx+arrow_amplitude*dy, cy-arrow_amplitude*dx, cx+arrow_amplitude*dx, cy+arrow_amplitude*dy);
+        }
+        
     }
 
     if (m_current_tool == ToolMode::ADD_EDGE && m_first_edge_node != -1)
@@ -501,6 +515,33 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
                 {
                     SNAP_Y = node.canvas_position_y;
                     total_dy = SNAP_Y - start_y;
+                }
+                double theoretical_x_px = theoretical_x * (width - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
+                double theoretical_y_px = theoretical_y * (height - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
+                double node_x_px = node.canvas_position_x * (width - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
+                double node_y_px = node.canvas_position_y * (height - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
+                if (SNAP_X == -1 && SNAP_Y == -1 && distance_cartesian(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px) > 24) // Check for diagonal (only if >40px away)
+                {
+                    if (distance_perpendicular(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px + 10) <= 2 * SNAP_MARGIN) // Top-left/Bottom-right axis
+                    {
+                        auto [SNAP_X, SNAP_Y] = enforce_diagonal(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px + 10);
+                        // Move snap back to relative
+                        SNAP_X = (SNAP_X) / (width - 2 * CANVAS_MARGIN);
+                        SNAP_Y = (SNAP_Y) / (height - 2 * CANVAS_MARGIN);
+                        
+                        total_dx = SNAP_X - start_x;
+                        total_dy = SNAP_Y - start_y;
+                    }
+                    else if (distance_perpendicular(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px - 10) <= 2 * SNAP_MARGIN) // Top-left/Bottom-right axis
+                    {
+                        auto [SNAP_X, SNAP_Y] = enforce_diagonal(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px - 10);
+                        // Move snap back to relative
+                        SNAP_X = (SNAP_X) / (width - 2 * CANVAS_MARGIN);
+                        SNAP_Y = (SNAP_Y) / (height - 2 * CANVAS_MARGIN); //  - SNAP_MARGIN
+                        
+                        total_dx = SNAP_X - start_x;
+                        total_dy = SNAP_Y - start_y;
+                    }
                 }
             }
         }

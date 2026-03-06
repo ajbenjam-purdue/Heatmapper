@@ -23,6 +23,8 @@ public:
     const wxColour COLOR_SELECT = wxColour(215, 200, 0); // Color for actively selected node/edge
     const wxColour COLOR_DESELECT = wxColour(150, 150, 150);
     const wxColour COLOR_GUIDE = wxColour(90, 90, 95); // Color for guidelines
+    const wxColour COLOR_EDGE = wxColour(90, 90, 95); // Color for edges
+    const wxColour COLOR_EDGE_BACKDROP = wxColour(0, 0, 0, 75); // Color for edges (shadow)
 
     // State
     std::unordered_set<int> m_sel_node_ids;
