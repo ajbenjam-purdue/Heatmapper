@@ -1,5 +1,6 @@
 #pragma once
 #include <wx/wx.h>
+#include <unordered_set>
 #include "ThermalNetwork.h"
 #include "MainFrame.h"
 
@@ -24,9 +25,12 @@ public:
     const wxColour COLOR_GUIDE = wxColour(90, 90, 95); // Color for guidelines
 
     // State
-    int m_sel_node_id = -1;
+    std::unordered_set<int> m_sel_node_ids;
+    //int m_sel_node_id = -1; Conversion for shift click
     int m_sel_edge_index = -1;
     bool m_is_dragging = false;
+    wxPoint m_drag_start_mouse; 
+    std::unordered_map<int, std::pair<double, double>> m_drag_start_nodes;
 
     //Snapping
     double SNAP_X = -1.0; // Init and held at -1 unless real coords exist. 

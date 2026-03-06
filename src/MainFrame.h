@@ -12,6 +12,7 @@ public:
     void ResetPropertiesWindow();
     void ShowEdgeProperties(int edge_index);
     void ForceSelectTool();
+    void UpdateToolbarIcons();
 
 private:
 

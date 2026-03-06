@@ -9,10 +9,10 @@ wxBEGIN_EVENT_TABLE(ThermalCanvas, wxPanel)
                 EVT_MOTION(ThermalCanvas::OnMouseMove)
                     wxEND_EVENT_TABLE()
 
-                        ThermalCanvas::ThermalCanvas(wxWindow *parent)
+ThermalCanvas::ThermalCanvas(wxWindow *parent)
     : wxPanel(parent, wxID_ANY)
 {
-    SetBackgroundColour(wxColour(40, 44, 52));
+    SetBackgroundColour(wxColour(42, 42, 44));
 }
 
 void ThermalCanvas::SetNetwork(ThermalNetwork *network)
@@ -134,7 +134,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         }
 
         // Selection pen
-        if (node.node_id == m_sel_node_id)
+        if (m_sel_node_ids.count(node.node_id) == 1)
         {
             gc->SetPen(wxPen(COLOR_SELECT, 3)); // Thick yellow pen
         }
@@ -174,67 +174,85 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
     {
     case ToolMode::SELECT:
     {
-        // Reset selections
-        m_sel_node_id = -1;
         m_sel_edge_index = -1;
+        bool found_node = false;
 
         for (auto const &[id, node] : m_network->network_nodes)
         {
-            // Calculate screen coordinates of this node
             double node_x = node.canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
             double node_y = node.canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-
-            // distance to node
             double dx = mouse_pos.x - node_x;
             double dy = mouse_pos.y - node_y;
-            double distance = std::sqrt((dx * dx) + (dy * dy));
-
-            // Is the click inside the radius?
-            if (distance <= NODE_RADIUS)
+            
+            if (std::sqrt((dx * dx) + (dy * dy)) <= NODE_RADIUS)
             {
-                m_sel_node_id = node.node_id;
+                found_node = true;
+
+                if (event.ShiftDown()) {
+                    // Toggle selection! If it's in the set, remove it. Otherwise, add it.
+                    if (m_sel_node_ids.count(id)) m_sel_node_ids.erase(id);
+                    else m_sel_node_ids.insert(id);
+                } 
+                else {
+                    // Only clear the group if they clicked a brand new, unselected node
+                    if (m_sel_node_ids.count(id) == 0) {
+                        m_sel_node_ids.clear();
+                        m_sel_node_ids.insert(id);
+                    }
+                }
+
+                // Dragging
                 m_is_dragging = true;
+                m_drag_start_mouse = mouse_pos; // Anchor the physical mouse
+                
+                m_drag_start_nodes.clear();
+                for (int sel_id : m_sel_node_ids) {
+                    // Anchor the mathematical node positions
+                    m_drag_start_nodes[sel_id] = {
+                        m_network->network_nodes[sel_id].canvas_position_x, 
+                        m_network->network_nodes[sel_id].canvas_position_y
+                    };
+                }
 
-                // Update UI
-                ((MainFrame *)GetParent())->ShowNodeProperties(node.node_id);
-
-                break; // Stop checking, node located
+                // Update UI based on how many are selected
+                if (m_sel_node_ids.size() == 1) {
+                    ((MainFrame *)GetParent())->ShowNodeProperties(*m_sel_node_ids.begin());
+                } else if (m_sel_node_ids.size() > 1) {
+                    ((MainFrame *)GetParent())->ShowNodeProperties(-2); // Trigger our new multi-select UI!
+                } else {
+                    ((MainFrame *)GetParent())->ShowNodeProperties(-1);
+                }
+                break; 
             }
         }
 
-        // Node still not found. Check for edge
-        if (m_sel_node_id == -1)
+        // Check for edges ONLY if we didn't hit a node
+        if (!found_node)
         {
             for (size_t i = 0; i < m_network->network_edges.size(); i++)
             {
                 const ThermalEdge &edge = m_network->network_edges[i];
-
-                // Convert everything to screen px
                 double edge_x_1 = m_network->network_nodes[edge.id_0].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
                 double edge_y_1 = m_network->network_nodes[edge.id_0].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
                 double edge_x_2 = m_network->network_nodes[edge.id_1].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
                 double edge_y_2 = m_network->network_nodes[edge.id_1].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
 
-                // Check first if bounding box criteria is met
-                if (in_bounding_box(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) && distance_perpendicular(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) <= EDGE_SELECTION_TOLERANCE)
+                if (in_bounding_box(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) && 
+                    distance_perpendicular(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) <= EDGE_SELECTION_TOLERANCE)
                 {
-                    m_sel_edge_index = i; // Set selected edge
-
-                    // Update UI
+                    m_sel_node_ids.clear(); // Hitting an edge clears the node group!
+                    m_sel_edge_index = i;
                     ((MainFrame *)GetParent())->ShowEdgeProperties(i);
-
                     break;
                 }
             }
         }
 
-        // No hits, show nothing
-        if (m_sel_node_id == -1 && m_sel_edge_index == -1) {
-            // Reset the show node properties
-            ((MainFrame*)GetParent())->ResetPropertiesWindow();
+        // Clicked absolute empty space
+        if (!found_node && m_sel_edge_index == -1) {
+            m_sel_node_ids.clear();
             ((MainFrame*)GetParent())->ShowNodeProperties(-1);
         }
-
         break;
     }
     case ToolMode::ADD_NODE:
@@ -247,7 +265,8 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
         if (!event.ShiftDown())
         {
             ((MainFrame*)GetParent())->ForceSelectTool(); // Override selection
-            m_sel_node_id = new_node_id;
+            m_sel_node_ids.clear();
+            m_sel_node_ids.insert(new_node_id);
             ((MainFrame *)GetParent())->ShowNodeProperties(new_node.node_id);
         }
         break;
@@ -337,9 +356,9 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
                 m_network->network_edges.end());
 
             // Clear UI if the deleted node was selected
-            if (m_sel_node_id == clicked_node_id)
+            if (m_sel_node_ids.count(clicked_node_id) == 1)
             {
-                m_sel_node_id = -1;
+                m_sel_node_ids.erase(clicked_node_id);
                 ((MainFrame *)GetParent())->ShowNodeProperties(-1);
             }
             break; // No need to check edges
@@ -375,63 +394,65 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
 
 void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
 {
-    // Check for dragging mouse with valid node & a valid network
-    if (m_is_dragging && m_sel_node_id != -1 && m_network)
+    if (m_is_dragging && m_sel_node_ids.size() > 0 && m_network)
     {
-
         int width, height;
         GetClientSize(&width, &height);
-
-        // Prevent division by zero if window is collapsed
-        if (width == 0 || height == 0)
-            return;
+        if (width == 0 || height == 0) return;
 
         wxPoint mouse_pos = event.GetPosition();
 
-        // Convert pixel coordinates back to normalized fractions
-        double new_norm_x = ((double)mouse_pos.x - CANVAS_MARGIN) / (width - CANVAS_MARGIN * 2);
-        double new_norm_y = ((double)mouse_pos.y - CANVAS_MARGIN) / (height - CANVAS_MARGIN * 2);
+        // 1. Calculate the TOTAL mouse movement since the click started
+        double total_dx = (double)(mouse_pos.x - m_drag_start_mouse.x) / (width - CANVAS_MARGIN * 2);
+        double total_dy = (double)(mouse_pos.y - m_drag_start_mouse.y) / (height - CANVAS_MARGIN * 2);
 
-        // Clamp values between 0.0 and 1.0 so nodes can't be dragged off-screen
-        new_norm_x = std::clamp(new_norm_x, 0.0, 1.0);
-        new_norm_y = std::clamp(new_norm_y, 0.0, 1.0);
+        // 2. Safely clamp the delta so the group can't be pushed off-screen
+        double min_x = 1.0, max_x = 0.0, min_y = 1.0, max_y = 0.0;
+        for (int id : m_sel_node_ids) {
+            auto [start_x, start_y] = m_drag_start_nodes[id];
+            min_x = std::min(min_x, start_x);
+            max_x = std::max(max_x, start_x);
+            min_y = std::min(min_y, start_y);
+            max_y = std::max(max_y, start_y);
+        }
+        
+        if (min_x + total_dx < 0.0) total_dx = -min_x;
+        if (max_x + total_dx > 1.0) total_dx = 1.0 - max_x;
+        if (min_y + total_dy < 0.0) total_dy = -min_y;
+        if (max_y + total_dy > 1.0) total_dy = 1.0 - max_y;
 
-        // Loop through all nodes to find (first) x snaps and (second) y snaps
-        // ThermalNode& drag_node = m_network->network_nodes[m_sel_node_id];
         SNAP_X = -1;
         SNAP_Y = -1;
-        for (const auto &[id, node] : m_network->network_nodes)
-        {
-            if (node.node_id == m_sel_node_id)
-                continue;
 
-            if (std::abs(node.canvas_position_x - new_norm_x) * (width - 2 * CANVAS_MARGIN) < SNAP_MARGIN)
-            {
-                // Snap to first match
-                SNAP_X = node.canvas_position_x;
-                new_norm_x = node.canvas_position_x;
-                break;
-            }
-        }
-        for (const auto &[id, node] : m_network->network_nodes)
-        {
-            if (node.node_id == m_sel_node_id)
-                continue;
+        // 3. Snapping (Only snap if dragging a single node to avoid chaos)
+        if (m_sel_node_ids.size() == 1) {
+            int id = *m_sel_node_ids.begin();
+            auto [start_x, start_y] = m_drag_start_nodes[id];
+            
+            double theoretical_x = start_x + total_dx;
+            double theoretical_y = start_y + total_dy;
 
-            if (std::abs(node.canvas_position_y - new_norm_y) * (height - 2 * CANVAS_MARGIN) < SNAP_MARGIN)
-            {
-                // Snap to first match
-                SNAP_Y = node.canvas_position_y;
-                new_norm_y = node.canvas_position_y;
-                break;
+            for (const auto &[other_id, node] : m_network->network_nodes) {
+                if (other_id == id) continue;
+
+                if (SNAP_X == -1 && std::abs(node.canvas_position_x - theoretical_x) * (width - 2 * CANVAS_MARGIN) < SNAP_MARGIN) {
+                    SNAP_X = node.canvas_position_x;
+                    total_dx = SNAP_X - start_x; // Override delta to snap exactly
+                }
+                if (SNAP_Y == -1 && std::abs(node.canvas_position_y - theoretical_y) * (height - 2 * CANVAS_MARGIN) < SNAP_MARGIN) {
+                    SNAP_Y = node.canvas_position_y;
+                    total_dy = SNAP_Y - start_y;
+                }
             }
         }
 
-        // Update the actual network data
-        m_network->network_nodes[m_sel_node_id].canvas_position_x = new_norm_x;
-        m_network->network_nodes[m_sel_node_id].canvas_position_y = new_norm_y;
+        // 4. Apply the final calculated delta to the stored anchor positions
+        for (int id : m_sel_node_ids) {
+            auto [start_x, start_y] = m_drag_start_nodes[id];
+            m_network->network_nodes[id].canvas_position_x = start_x + total_dx;
+            m_network->network_nodes[id].canvas_position_y = start_y + total_dy;
+        }
 
-        // Redraw to make the node follow the cursor
         Refresh();
     }
 }

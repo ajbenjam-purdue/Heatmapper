@@ -2,6 +2,9 @@
 #include "ThermalCanvas.h"
 #include "ThermalSolver.h"
 #include <fstream>
+#include <wx/bmpbndl.h>
+#include <wx/filename.h>
+#include <wx/stdpaths.h> // Icons
 #include "json.hpp"
 
 #if defined(__WXMSW__)
@@ -136,12 +139,20 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     SetMenuBar(menuBar);
 
     // Toolbar
-    wxToolBar* toolBar = CreateToolBar();
-    toolBar->AddRadioTool(ID_ToolSelect, "Select", wxArtProvider::GetBitmap(wxART_NORMAL_FILE));
-    toolBar->AddRadioTool(ID_ToolNode, "Add Node", wxArtProvider::GetBitmap(wxART_PLUS));
-    toolBar->AddRadioTool(ID_ToolEdge, "Add Edge", wxArtProvider::GetBitmap(wxART_GO_FORWARD));
-    toolBar->AddRadioTool(ID_ToolDelete, "Delete", wxArtProvider::GetBitmap(wxART_DELETE));
-    toolBar->Realize(); // Render
+
+    // Get asset paths
+    wxString resDir = wxStandardPaths::Get().GetResourcesDir();
+    wxString sep = wxFileName::GetPathSeparator(); 
+
+    // Load SVGs
+    wxToolBar* toolBar = CreateToolBar(wxTB_FLAT | wxTB_NODIVIDER | wxBORDER_NONE);
+    toolBar->AddTool(ID_ToolSelect, "Select", wxNullBitmap); // Temporary bitmap, we will set it correctly later
+    toolBar->AddTool(ID_ToolNode, "Add Node", wxNullBitmap);
+    toolBar->AddTool(ID_ToolEdge, "Add Edge", wxNullBitmap);
+    toolBar->AddTool(ID_ToolDelete, "Delete", wxNullBitmap);
+    toolBar->Realize(); 
+    
+    UpdateToolbarIcons(); // Paint the correct SVGs
 }
 
 void MainFrame::OnSaveAs(wxCommandEvent& event) {
@@ -228,6 +239,15 @@ void MainFrame::ShowNodeProperties(int node_id) {
         return;
     }
 
+    // Handle Multiple Selection State (-2)
+    if (node_id == -2) {
+        ResetPropertiesWindow();
+        m_node_label->SetLabel("Multiple Nodes Selected");
+        m_node_label->Show();
+        this->Layout();
+        return;
+    }
+
     // Otherwise, show the node properties!
     m_node_label->Show();
     m_temp_input->Show();
@@ -284,7 +304,7 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
     ThermalEdge& edge = m_active_network.network_edges[edge_index];
     
     m_res_input->SetValue(wxString::Format("%.2f", edge.resistance()));
-    m_flow_disp->SetValue(wxString::Format("%.2f", m_active_network.get_edge_flux(edge_index)));
+    m_flow_disp->SetValue(wxString::Format("%.2f", std::abs(m_active_network.get_edge_flux(edge_index))));
 
     this->Layout();
 }
@@ -342,9 +362,31 @@ void MainFrame::OnToolSelect(wxCommandEvent& event) {
     else if (event.GetId() == ID_ToolNode) m_canvas->SetToolMode(ToolMode::ADD_NODE);
     else if (event.GetId() == ID_ToolEdge) m_canvas->SetToolMode(ToolMode::ADD_EDGE);
     else if (event.GetId() == ID_ToolDelete) m_canvas->SetToolMode(ToolMode::DELETE_ITEM);
+
+    UpdateToolbarIcons();
 }
 
 void MainFrame::ForceSelectTool() {
-    GetToolBar()->ToggleTool(ID_ToolSelect, true); // Visually press the button
-    m_canvas->SetToolMode(ToolMode::SELECT);       // Update the canvas
+    m_canvas->SetToolMode(ToolMode::SELECT);
+    UpdateToolbarIcons();
+}
+
+// Fake toolbar
+void MainFrame::UpdateToolbarIcons() {
+    wxString resDir = wxStandardPaths::Get().GetResourcesDir();
+    wxString sep = wxFileName::GetPathSeparator();
+    wxToolBar* tb = GetToolBar();
+    
+    // 1. Reset everything to the default, inactive SVGs
+    tb->SetToolNormalBitmap(ID_ToolSelect, wxBitmapBundle::FromSVGFile(resDir + sep + "select.svg", wxSize(24, 24)));
+    tb->SetToolNormalBitmap(ID_ToolNode, wxBitmapBundle::FromSVGFile(resDir + sep + "add_node.svg", wxSize(24, 24)));
+    tb->SetToolNormalBitmap(ID_ToolEdge, wxBitmapBundle::FromSVGFile(resDir + sep + "add_edge.svg", wxSize(24, 24)));
+    tb->SetToolNormalBitmap(ID_ToolDelete, wxBitmapBundle::FromSVGFile(resDir + sep + "delete.svg", wxSize(24, 24)));
+
+    // 2. Overwrite the currently active tool with its "_selected" glowing version!
+    ToolMode active = m_canvas->m_current_tool;
+    if (active == ToolMode::SELECT) tb->SetToolNormalBitmap(ID_ToolSelect, wxBitmapBundle::FromSVGFile(resDir + sep + "select_selected.svg", wxSize(24, 24)));
+    else if (active == ToolMode::ADD_NODE) tb->SetToolNormalBitmap(ID_ToolNode, wxBitmapBundle::FromSVGFile(resDir + sep + "add_node_selected.svg", wxSize(24, 24)));
+    else if (active == ToolMode::ADD_EDGE) tb->SetToolNormalBitmap(ID_ToolEdge, wxBitmapBundle::FromSVGFile(resDir + sep + "add_edge_selected.svg", wxSize(24, 24)));
+    else if (active == ToolMode::DELETE_ITEM) tb->SetToolNormalBitmap(ID_ToolDelete, wxBitmapBundle::FromSVGFile(resDir + sep + "delete_selected.svg", wxSize(24, 24)));
 }

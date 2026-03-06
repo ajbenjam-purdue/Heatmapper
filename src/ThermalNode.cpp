@@ -11,7 +11,8 @@ ThermalNode::ThermalNode(size_t id)
       property_specific_heat(1000.0),
       property_label("Defualt"),
       node_id(id),
-      node_temperature(15.0)
+      node_temperature(15.0),
+      ext_load(0.0)
 {
 }
 
@@ -24,6 +25,7 @@ ThermalNode::ThermalNode(double position_x, double position_y, double mass, doub
     property_label = label;
     node_id = id;
     node_temperature = temperature;
+    ext_load = 0.0;
 }
 
 // Override Properties

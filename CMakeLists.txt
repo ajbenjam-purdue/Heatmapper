@@ -49,15 +49,20 @@ endif()
 # ==========================================
 # 3. ASSET PACKAGING
 # ==========================================
+file(GLOB SVG_ICONS "assets/*.svg") 
+
 if(APPLE)
-    # Define the Mac icon and tell CMake to put it in the bundle's Resources folder
-    set(APP_ASSETS "assets/icon.icns")
+    # Bundle the Mac icon AND the SVGs into the Resources folder
+    set(APP_ASSETS "assets/icon.icns" ${SVG_ICONS})
     set_source_files_properties(${APP_ASSETS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 elseif(WIN32)
-    # Automatically generate a flawless resource file with the absolute, full path!
+    # Generate the Windows icon resource
     set(RC_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/generated_resource.rc")
     file(WRITE ${RC_FILE_PATH} "AppIcon ICON \"${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.ico\"\n")
-    set(APP_ASSETS ${RC_FILE_PATH})
+    set(APP_ASSETS ${RC_FILE_PATH} ${SVG_ICONS})
+
+    # Tell CMake to physically copy the SVGs to the MSVC Release folder!
+    file(COPY ${SVG_ICONS} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
 endif()
 
 # ==========================================
