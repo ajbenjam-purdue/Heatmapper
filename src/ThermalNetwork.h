@@ -16,6 +16,11 @@ public:
     std::vector<ThermalEdge> network_edges;
     int next_node_id = 0;
 
+    // Reset network
+    void network_nodes_clear();
+    void network_edges_clear();
+    void network_clear();
+
     std::string network_label;
 
     // Supplied vectors overload
@@ -55,4 +60,5 @@ public:
     double get_edge_flux(size_t id); // Gets the flux across an edge
 
     bool has_edge(size_t id_0, size_t id_1); // Returns true if an edge exists between the two node ids
+
 };

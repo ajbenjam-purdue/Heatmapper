@@ -24,6 +24,7 @@ enum {
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_OPEN, MainFrame::OnOpen)
+    EVT_MENU(wxID_CLEAR, MainFrame::OnClear)
     EVT_MENU(wxID_SAVEAS, MainFrame::OnSaveAs)
     EVT_MENU(wxID_EXIT, MainFrame::OnExit)
     EVT_MENU(ID_RunSteadyState, MainFrame::OnRunSteadyState)
@@ -126,6 +127,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     menuFile->Append(wxID_OPEN, "&Load from .json\tCtrl-O", "Open a thermal network JSON file");
     menuFile->Append(wxID_SAVEAS, "Save &As .json\tCtrl-Shift-S", "Save the thermal network to JSON");
     menuFile->AppendSeparator();
+    menuFile->Append(wxID_CLEAR, "&Reset workspace\tCtrl-R", "Reset the current workspace");
     menuFile->Append(wxID_EXIT);
 
     wxMenu *menuRun = new wxMenu;
@@ -155,24 +157,42 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     UpdateToolbarIcons(); // Paint the correct SVGs
 }
 
+void MainFrame::OnClear(wxCommandEvent& event) {
+    if (std::max(m_active_network.network_nodes.size(), m_active_network.network_edges.size()) >= 4) // Either N or E >= 4
+    {
+        // Warn if very populated
+        int answer = wxMessageBox(std::format("Do you want to proceed? You have {} node(s) and {} edge(s) in the workspace.", m_active_network.network_nodes.size(), m_active_network.network_edges.size()), "Confirm workspace clearing", 
+            wxYES_NO | wxICON_WARNING, this);
+        
+        if (answer != wxYES)
+        {
+            return;
+        }
+    }
+
+    // Clear network
+    m_active_network.network_clear();
+    Refresh();
+}
+
 void MainFrame::OnSaveAs(wxCommandEvent& event) {
-    // 1. Open the native save dialog
+    // Open the native save dialog
     wxFileDialog saveFileDialog(this, "Save Thermal Network", "", "",
                                 "JSON files (*.json)|*.json", 
                                 wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
                                 
-    // If the user clicks "Cancel", just abort
+    // If the user clicks "Cancel" abort
     if (saveFileDialog.ShowModal() == wxID_CANCEL) {
         return;     
     }
 
-    // 2. Get your JSON object from the network
+    // Get JSON object from the network
     nlohmann::json j = m_active_network.to_json();
 
-    // 3. Write it to the path the user selected
+    // Write it to the path the user selected
     std::ofstream file(saveFileDialog.GetPath().ToStdString());
     if (file.is_open()) {
-        file << j.dump(4); // The '4' adds beautiful indentation (4 spaces)
+        file << j.dump(4); // 4 space indentation
         file.close();
     } else {
         wxLogError("Cannot save current contents in file '%s'.", saveFileDialog.GetPath());

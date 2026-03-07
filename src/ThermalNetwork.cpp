@@ -254,3 +254,24 @@ bool ThermalNetwork::has_edge(size_t id_0, size_t id_1)
     }
     return false;
 }
+
+// Remove all nodes safely from network
+void ThermalNetwork::network_nodes_clear()
+{
+    network_nodes.clear();
+    next_node_id = 0; // Reset
+    std::unordered_map<int, ThermalNode>().swap(network_nodes); // Swap with empty UM to clear buffer
+}
+
+void ThermalNetwork::network_edges_clear()
+{
+    network_edges.clear();
+    network_edges.shrink_to_fit();
+}
+
+void ThermalNetwork::network_clear()
+{
+    network_edges_clear();
+    network_nodes_clear();
+    network_label = "Unnamed network";
+}

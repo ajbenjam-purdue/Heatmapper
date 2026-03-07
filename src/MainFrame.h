@@ -1,6 +1,7 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/artprov.h>
+#include <format>
 #include "ThermalNetwork.h"
 
 class ThermalCanvas; // Fwd declaration
@@ -41,6 +42,7 @@ private:
 
     void OnOpen(wxCommandEvent& event);
     void OnSaveAs(wxCommandEvent& event);
+    void OnClear(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
     void OnRunSteadyState(wxCommandEvent& event);
     void OnRunTransient(wxCommandEvent& event);
