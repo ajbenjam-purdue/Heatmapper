@@ -46,6 +46,8 @@ class ThermalEdge {
 
     double resistance() const;
     std::variant<ConductionUniform, ConvectionUniform, RadiationUniform, PureResistance> params;
+
+    bool hasNode(size_t id);
 };
 
 std::ostream& operator<<(std::ostream& os, const ThermalEdge& node);

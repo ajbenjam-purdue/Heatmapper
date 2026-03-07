@@ -30,6 +30,7 @@ public:
     std::unordered_set<int> m_sel_node_ids;
     //int m_sel_node_id = -1; Conversion for shift click
     int m_sel_edge_index = -1;
+    int m_del_node_index = -1;
     bool m_is_dragging = false;
     bool m_is_box_selecting = false;
     wxPoint m_box_start;

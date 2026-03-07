@@ -117,14 +117,14 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         double x = node.canvas_position_x * (width - CANVAS_MARGIN * 2) - NODE_RADIUS + CANVAS_MARGIN;
         double y = node.canvas_position_y * (height - CANVAS_MARGIN * 2) - NODE_RADIUS + CANVAS_MARGIN;
 
+        // Find the center of the node
+        double center_x = x + NODE_RADIUS;
+        double center_y = y + NODE_RADIUS;
+
         // Heat flux out/in
         if (std::abs(node.ext_load) > 0.0)
         {
             gc->SetPen(wxPen(wxColour(255, 120, 0), 3)); // 3px Orange Pen
-
-            // Find the center of the node
-            double center_x = x + NODE_RADIUS;
-            double center_y = y + NODE_RADIUS;
 
             // The tip of the arrow rests just outside the top edge of the circle
             double tip_x = center_x;
@@ -149,8 +149,8 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         // Node color
         if (std::abs(max_node_temperature - min_node_temperature) < 0.01)
         {
-            gc->SetBrush(wxBrush(wxColour(50, 120, 200)));
-            gc->SetPen(wxPen(wxColour(30, 100, 180)));
+            gc->SetBrush(COLOR_DESELECT);
+            gc->SetPen(COLOR_DESELECT);
         }
         else
         {
@@ -160,21 +160,60 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         }
 
         // Selection pen
-        if (m_sel_node_ids.count(node.node_id) == 1 || (m_current_tool == ToolMode::ADD_EDGE && m_first_edge_node == node.node_id))
+        if ((m_current_tool == ToolMode::SELECT && m_sel_node_ids.count(node.node_id) == 1) || (m_current_tool == ToolMode::ADD_EDGE && m_first_edge_node == node.node_id))
         {
-            gc->SetPen(wxPen(COLOR_SELECT, 3)); // Thick yellow pen
+            gc->SetPen(wxPen(COLOR_SELECT, 3)); // Yellow pen
+        }
+        else if (m_del_node_index == node.node_id)
+        {
+            gc->SetPen(wxPen(COLOR_SELECT, 3, wxPENSTYLE_DOT)); // Dashed yellow pen
         }
 
         gc->DrawEllipse(x, y, NODE_RADIUS * 2, NODE_RADIUS * 2);
 
         // Format the temperature to 1 decimal place
-        wxString temp_text = wxString::Format("%.1f °C", node.node_temperature);
+        wxString temp_text = wxString::Format("%s (%.1f C)", node.property_label, node.node_temperature);
 
-        // Calculate text position (shift right by the diameter + a 5px margin)
-        double text_x = x + (NODE_RADIUS * 2) + 5;
-        double text_y = y + (NODE_RADIUS / 2); // Center it vertically a bit
+        // Text box width, height
+        double text_w, text_h;
 
-        // Draw it!
+        gc->GetTextExtent(temp_text, &text_w, &text_h);
+
+        std::vector<ThermalNode> connected_nodes = m_network->connected_nodes(node.node_id);
+        std::vector<double> node_rel_angle;
+
+        for (ThermalNode test_node : connected_nodes)
+        {
+            auto [test_node_x, test_node_y] = test_node.screenCoordinates(width, height, CANVAS_MARGIN);
+            node_rel_angle.push_back(std::atan2(test_node_y - center_y, test_node_x - center_x));
+        }
+
+        std::sort(node_rel_angle.begin(), node_rel_angle.end()); // Sort in ascending order
+
+        double best_angle = 0;
+        double max_gap = -1;
+
+        for (size_t i = 0; i < node_rel_angle.size(); i++)
+        {
+            double a1 = node_rel_angle[i];
+            double a2 = node_rel_angle[(i + 1) % node_rel_angle.size()];
+
+            double gap = a2 - a1;
+            if (i == node_rel_angle.size() - 1)
+                gap += 2 * M_PI;
+
+            if (gap > max_gap)
+            {
+                max_gap = gap;
+                best_angle = a1 + gap / 2.0;
+            }
+        }
+
+        double angle = best_angle + PI / 2; // 0 = straight up, + = clockwise
+        double text_x = center_x - text_w / 2.0 + std::sin(angle) * (NODE_RADIUS + text_w / 2 + 6);
+        double text_y = center_y - text_h / 2.0 - std::cos(angle) * (NODE_RADIUS + text_h / 2 + 3);
+
+        // Draw text
         gc->DrawText(temp_text, text_x, text_y);
     }
 
@@ -560,6 +599,30 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
     { // Bounding box
         m_current_mouse_pos = event.GetPosition();
         Refresh(); // Force OnPaint to draw the overlay
+    }
+    else if (!m_is_dragging && m_current_tool == ToolMode::DELETE_ITEM)
+    { // Check for nodes
+
+        int width, height;
+        GetClientSize(&width, &height);
+        wxPoint mouse_pos = event.GetPosition();
+        double mouse_pos_x = (double)(mouse_pos.x);
+        double mouse_pos_y = (double)(mouse_pos.y);
+        double dist;
+
+        for (auto& [id, node] : m_network->network_nodes)
+        {
+            auto [node_x_px, node_y_px] = node.screenCoordinates(width, height, CANVAS_MARGIN);
+            dist = std::sqrt((node_x_px - mouse_pos_x) * (node_x_px - mouse_pos_x) + (node_y_px - mouse_pos_y) * (node_y_px - mouse_pos_y));
+            if (dist <= NODE_RADIUS)
+            {
+                m_del_node_index = id;
+                break;
+            }
+        }
+
+        // No nodes hovered
+        m_del_node_index = -1;
     }
 }
 

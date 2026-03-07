@@ -61,4 +61,5 @@ public:
 
     bool has_edge(size_t id_0, size_t id_1); // Returns true if an edge exists between the two node ids
 
+    std::vector<ThermalNode> connected_nodes(size_t id);
 };

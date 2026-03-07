@@ -68,3 +68,8 @@ std::ostream& operator<<(std::ostream& os, const ThermalEdge& edge) {
     os << "Edge between node " << edge.id_0 << " and node " << edge.id_1 << " (" << edge.type << ")";
     return os;
 }
+
+bool ThermalEdge::hasNode(size_t id)
+{
+    return id_0 == id || id_1 == id;
+}

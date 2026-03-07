@@ -275,3 +275,16 @@ void ThermalNetwork::network_clear()
     network_nodes_clear();
     network_label = "Unnamed network";
 }
+
+std::vector<ThermalNode> ThermalNetwork::connected_nodes(size_t id)
+{
+    std::vector<ThermalNode> result;
+    for (ThermalEdge edge : network_edges)
+    {
+        if (edge.hasNode(id))
+        {
+            result.push_back((edge.id_0 == id ? network_nodes[edge.id_1] : network_nodes[edge.id_0]));
+        }
+    }
+    return result;
+}

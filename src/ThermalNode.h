@@ -38,6 +38,8 @@ public:
     void applyHeatLoad(double watts);
 
     void clearConstraints();
+
+    std::pair<double, double> screenCoordinates(double screen_width, double screen_height, double canvas_margin);
 };
 
 std::ostream &operator<<(std::ostream &os, const ThermalNode &node);

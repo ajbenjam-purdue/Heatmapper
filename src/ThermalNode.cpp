@@ -63,3 +63,9 @@ std::ostream &operator<<(std::ostream &os, const ThermalNode &node)
     os << "Node \"" << node.property_label << "\" at position " << node.node_id << " (" << node.node_temperature << " C, " << node.property_mass << " kg)";
     return os;
 }
+
+// Returns (position x [px], position y [px])
+std::pair<double, double> ThermalNode::screenCoordinates(double screen_width, double screen_height, double canvas_margin)
+{
+    return std::pair<double, double>(canvas_margin + (screen_width - 2 * canvas_margin) * canvas_position_x, canvas_margin + (screen_height - 2 * canvas_margin) * canvas_position_y);
+}

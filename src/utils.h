@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <tuple>
 
+const double PI = 3.14159265358979323846; 
+
 // Perpendicular distance from the point (x0, y0) to the line between (x1, y1) and (x2, y2)
 double distance_perpendicular(double x0, double y0, double x1, double y1, double x2, double y2)
 {
