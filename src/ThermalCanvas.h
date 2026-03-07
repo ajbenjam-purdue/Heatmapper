@@ -58,8 +58,14 @@ public:
 
     void SetToolMode(ToolMode mode);
 
+    void DeleteSelectedItems();
+    void CopySelected();
+    void PasteSelected();
+
 private:
     ThermalNetwork* m_network = nullptr; // Pointer to the data
+
+    std::vector<ThermalNode> m_clipboard_nodes; // Memory for copy/paste
 
     void OnPaint(wxPaintEvent& event);
     

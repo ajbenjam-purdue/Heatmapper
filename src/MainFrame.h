@@ -14,10 +14,13 @@ public:
     void ShowEdgeProperties(int edge_index);
     void ForceSelectTool();
     void UpdateToolbarIcons();
+    ~MainFrame(); // destructor (necessary for mem leak prevention)
+    void UpdateDynamicMenus();
 
 private:
 
-    wxStaticText* m_node_label; // What the node is labeled
+    wxStaticText* m_node_label; // What the node is labeled (label)
+    wxTextCtrl* m_node_label_str; // What the node is labeled (actual value)
     wxTextCtrl* m_temp_input; // What the temp should be
     wxCheckBox* m_is_fixed_checkbox; // If the temp is a fixed point
     wxTextCtrl* m_load_input; // What the input load is (W)
@@ -48,6 +51,12 @@ private:
     void OnRunTransient(wxCommandEvent& event);
     void OnApplyProperties(wxCommandEvent& event);
     void OnToolSelect(wxCommandEvent& event);
+    void OnCharHook(wxKeyEvent& event);
+
+    wxMenu* m_node_menu = nullptr;
+    wxMenu* m_edge_menu = nullptr;
+    bool m_is_node_menu_attached = false;
+    bool m_is_edge_menu_attached = false;
 
     wxDECLARE_EVENT_TABLE();
 };

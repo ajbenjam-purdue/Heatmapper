@@ -188,6 +188,9 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
             node_rel_angle.push_back(std::atan2(test_node_y - center_y, test_node_x - center_x));
         }
 
+        if (std::abs(node.ext_load) > 0.0)
+            node_rel_angle.push_back(-PI/2.0);
+
         std::sort(node_rel_angle.begin(), node_rel_angle.end()); // Sort in ascending order
 
         double best_angle = 0;
@@ -211,7 +214,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
 
         double angle = best_angle + PI / 2; // 0 = straight up, + = clockwise
         double text_x = center_x - text_w / 2.0 + std::sin(angle) * (NODE_RADIUS + text_w / 2 + 6);
-        double text_y = center_y - text_h / 2.0 - std::cos(angle) * (NODE_RADIUS + text_h / 2 + 3);
+        double text_y = center_y - text_h / 2.0 - std::cos(angle) * (NODE_RADIUS + text_h / 2 + 6);
 
         // Draw text
         gc->DrawText(temp_text, text_x, text_y);
@@ -679,7 +682,71 @@ void ThermalCanvas::OnMouseLeftUp(wxMouseEvent &event)
 
 void ThermalCanvas::SetToolMode(ToolMode mode)
 {
+    m_first_edge_node = -1; // Always reset edge+sel memory when switching tools
+    m_sel_edge_index = -1;
+    m_sel_node_ids.clear();
     m_current_tool = mode;
-    m_first_edge_node = -1; // Always reset edge memory when switching tools
+    Refresh();
+}
+
+void ThermalCanvas::DeleteSelectedItems()
+{
+    if (m_sel_node_ids.empty() && m_sel_edge_index == -1) return;
+
+    // Delete all selected nodes and their connected edges
+    for (int id : m_sel_node_ids) {
+        m_network->network_nodes.erase(id);
+        m_network->network_edges.erase(
+            std::remove_if(m_network->network_edges.begin(), m_network->network_edges.end(),
+                           [id](const ThermalEdge &e) { return e.id_0 == id || e.id_1 == id; }),
+            m_network->network_edges.end());
+    }
+
+    // Delete selected edge (if one is selected)
+    if (m_sel_edge_index != -1 && m_sel_edge_index < m_network->network_edges.size()) {
+        m_network->network_edges.erase(m_network->network_edges.begin() + m_sel_edge_index);
+    }
+
+    // Clear memory and UI
+    m_sel_node_ids.clear();
+    m_sel_edge_index = -1;
+    ((MainFrame*)GetParent())->ResetPropertiesWindow();
+    Refresh();
+}
+
+void ThermalCanvas::CopySelected()
+{
+    m_clipboard_nodes.clear();
+    for (int id : m_sel_node_ids) {
+        m_clipboard_nodes.push_back(m_network->network_nodes[id]);
+    }
+}
+
+void ThermalCanvas::PasteSelected()
+{
+    if (m_clipboard_nodes.empty() || !m_network) return;
+
+    m_sel_node_ids.clear(); // Deselect originals
+    m_sel_edge_index = -1;
+
+    for (ThermalNode& node : m_clipboard_nodes) {
+        // Shift the node so it doesn't perfectly hide under the original
+        ThermalNode new_node = node;
+        new_node.canvas_position_x = std::clamp(new_node.canvas_position_x + 0.05, 0.0, 1.0);
+        new_node.canvas_position_y = std::clamp(new_node.canvas_position_y + 0.05, 0.0, 1.0);
+        
+        // Add to network and select the newly generated ID
+        int new_id = m_network->add_node(new_node);
+        m_sel_node_ids.insert(new_id);
+        
+        // Shift the clipboard node so pasting AGAIN continues the diagonal pattern!
+        node.canvas_position_x = new_node.canvas_position_x;
+        node.canvas_position_y = new_node.canvas_position_y;
+    }
+
+    // Update UI
+    if (m_sel_node_ids.size() == 1) ((MainFrame*)GetParent())->ShowNodeProperties(*m_sel_node_ids.begin());
+    else if (m_sel_node_ids.size() > 1) ((MainFrame*)GetParent())->ShowNodeProperties(-2);
+    
     Refresh();
 }

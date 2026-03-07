@@ -34,6 +34,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_TOOL(ID_ToolNode, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolEdge, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolDelete, MainFrame::OnToolSelect)
+    EVT_CHAR_HOOK(MainFrame::OnCharHook)
 wxEND_EVENT_TABLE()
 
 void MainFrame::OnRunSteadyState(wxCommandEvent& event) {
@@ -68,7 +69,10 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxButton* run_ss_button = new wxButton(properties_panel, ID_RunSteadyState, "Solve Steady State");
     wxButton* run_tr_button = new wxButton(properties_panel, ID_RunTransient, "Transient Analysis");
     m_node_label = new wxStaticText(properties_panel, wxID_ANY, "Select a node...");
-    properties_sizer->Add(m_node_label, 0, wxALL | wxEXPAND, 5);
+    properties_sizer->Add(m_node_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_node_label_str = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    properties_sizer->Add(m_node_label_str, 0, wxALL | wxEXPAND, 5);
+    m_node_label_str->Hide();
 
     m_temp_label = new wxStaticText(properties_panel, wxID_ANY, "Temperature (°C):");
     properties_sizer->Add(m_temp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
@@ -127,12 +131,19 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     menuFile->Append(wxID_OPEN, "&Load from .json\tCtrl-O", "Open a thermal network JSON file");
     menuFile->Append(wxID_SAVEAS, "Save &As .json\tCtrl-Shift-S", "Save the thermal network to JSON");
     menuFile->AppendSeparator();
-    menuFile->Append(wxID_CLEAR, "&Reset workspace\tCtrl-R", "Reset the current workspace");
+    menuFile->Append(wxID_CLEAR, "&Reset workspace\tCtrl-Shift-C", "Reset the current workspace");
     menuFile->Append(wxID_EXIT);
 
     wxMenu *menuRun = new wxMenu;
     menuRun->Append(ID_RunSteadyState, "&Run Static Analysis\tCtrl-R", "Run the steady-state configuration");
     menuRun->Append(ID_RunTransient, "&Run Transient Analysis\tCtrl-Alt-R", "Perform transient analysis on the current configuration");
+
+    // Create the contextual menus (But don't append them to the bar yet)
+    m_node_menu = new wxMenu;
+    m_node_menu->Append(wxID_ANY, "Remove Constraints\tCtrl-T", "Unlock the temperature and remove any external flux for the selected node(s)");
+
+    m_edge_menu = new wxMenu;
+    m_edge_menu->Append(wxID_ANY, "Set Perfect Conductor", "Drop thermal resistance to zero");
 
     // Add it to the Menu Bar and attach it to the Frame
     wxMenuBar *menuBar = new wxMenuBar;
@@ -148,7 +159,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
     // Load SVGs
     wxToolBar* toolBar = CreateToolBar(wxTB_FLAT | wxTB_NODIVIDER | wxBORDER_NONE);
-    toolBar->AddTool(ID_ToolSelect, "Select", wxNullBitmap); // Temporary bitmap, we will set it correctly later
+    toolBar->AddTool(ID_ToolSelect, "Select", wxNullBitmap); // Temporary bitmap
     toolBar->AddTool(ID_ToolNode, "Add Node", wxNullBitmap);
     toolBar->AddTool(ID_ToolEdge, "Add Edge", wxNullBitmap);
     toolBar->AddTool(ID_ToolDelete, "Delete", wxNullBitmap);
@@ -232,6 +243,7 @@ void MainFrame::ResetPropertiesWindow() {
 
     // Hide everything
     m_node_label->Hide();
+    m_node_label_str->Hide();
     m_temp_input->Hide();
     m_temp_label->Hide();
     m_is_fixed_checkbox->Hide();
@@ -243,7 +255,8 @@ void MainFrame::ResetPropertiesWindow() {
     m_flow_disp_label->Hide();
     m_apply_button->Hide();
 
-    this->Layout();
+    this->Layout(); // Update layout
+    UpdateDynamicMenus(); // Update menus
 }
 
 void MainFrame::ShowNodeProperties(int node_id) {
@@ -255,6 +268,7 @@ void MainFrame::ShowNodeProperties(int node_id) {
         ResetPropertiesWindow();
         m_node_label->SetLabel("Select a node...");
         m_node_label->Show();
+        m_node_label_str->Hide();
         this->Layout();
         return;
     }
@@ -264,12 +278,14 @@ void MainFrame::ShowNodeProperties(int node_id) {
         ResetPropertiesWindow();
         m_node_label->SetLabel("Multiple Nodes Selected");
         m_node_label->Show();
+        m_node_label_str->Hide();
         this->Layout();
         return;
     }
 
     // Otherwise, show the node properties!
     m_node_label->Show();
+    m_node_label_str->Show();
     m_temp_input->Show();
     m_temp_label->Show();
     m_is_fixed_checkbox->Show();
@@ -286,12 +302,14 @@ void MainFrame::ShowNodeProperties(int node_id) {
     // Grab the node and populate the text boxes
     ThermalNode& node = m_active_network.network_nodes[node_id];
     
-    m_node_label->SetLabel(wxString::Format("Editing Node %d", node_id));
+    m_node_label->SetLabel(wxString::Format("Editing Node (ID: %d)", node_id));
+    m_node_label_str->SetValue(wxString::Format("%s", node.property_label));
     m_temp_input->SetValue(wxString::Format("%.2f", node.node_temperature));
     m_load_input->SetValue(wxString::Format("%.2f", node.ext_load));
     m_is_fixed_checkbox->SetValue(node.is_fixed_temperature);
 
     this->Layout();
+    UpdateDynamicMenus();
 }
 
 
@@ -314,6 +332,7 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
 
     // Ensure node properties stay hidden
     m_node_label->Hide();
+    m_node_label_str->Hide();
     m_temp_label->Hide();
     m_temp_input->Hide();
     m_is_fixed_checkbox->Hide();
@@ -327,6 +346,7 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
     m_flow_disp->SetValue(wxString::Format("%.2f", std::abs(m_active_network.get_edge_flux(edge_index))));
 
     this->Layout();
+    UpdateDynamicMenus();
 }
 
 void MainFrame::OnApplyProperties(wxCommandEvent& event) {
@@ -338,6 +358,10 @@ void MainFrame::OnApplyProperties(wxCommandEvent& event) {
         // Read the text from the UI
         wxString temp_str = m_temp_input->GetValue();
         wxString load_str = m_load_input->GetValue();
+        wxString label_str = m_node_label_str->GetValue();
+
+        // Apply node label
+        node.property_label = label_str;
 
         double new_temp, new_load;
 
@@ -345,7 +369,7 @@ void MainFrame::OnApplyProperties(wxCommandEvent& event) {
         if (temp_str.ToDouble(&new_temp)) {
             node.node_temperature = new_temp;
             
-            // If they explicitly change the temp, let's fix it as a boundary condition!
+            // If they explicitly change the temp, fix it as a boundary condition
             node.fixTemperature(new_temp); 
         }
 
@@ -370,7 +394,7 @@ void MainFrame::OnApplyProperties(wxCommandEvent& event) {
         double new_res;
         if (m_res_input->GetValue().ToDouble(&new_res)) {
             // Assign directly -> stand in. TODO: CHANGE TO COMPLEX DROPDOWN
-            edge.params = PureResistance{new_res}; 
+            edge.params = PureResistance{std::max(new_res, 1e-10)}; 
         }
     }
     // Tell the canvas to redraw with the new numbers
@@ -397,16 +421,93 @@ void MainFrame::UpdateToolbarIcons() {
     wxString sep = wxFileName::GetPathSeparator();
     wxToolBar* tb = GetToolBar();
     
-    // 1. Reset everything to the default, inactive SVGs
+    // Reset everything to the default, inactive SVGs
     tb->SetToolNormalBitmap(ID_ToolSelect, wxBitmapBundle::FromSVGFile(resDir + sep + "select.svg", wxSize(24, 24)));
     tb->SetToolNormalBitmap(ID_ToolNode, wxBitmapBundle::FromSVGFile(resDir + sep + "add_node.svg", wxSize(24, 24)));
     tb->SetToolNormalBitmap(ID_ToolEdge, wxBitmapBundle::FromSVGFile(resDir + sep + "add_edge.svg", wxSize(24, 24)));
     tb->SetToolNormalBitmap(ID_ToolDelete, wxBitmapBundle::FromSVGFile(resDir + sep + "delete.svg", wxSize(24, 24)));
 
-    // 2. Overwrite the currently active tool with its "_selected" glowing version!
+    // Overwrite the currently active tool with its "_selected" version
     ToolMode active = m_canvas->m_current_tool;
     if (active == ToolMode::SELECT) tb->SetToolNormalBitmap(ID_ToolSelect, wxBitmapBundle::FromSVGFile(resDir + sep + "select_selected.svg", wxSize(24, 24)));
     else if (active == ToolMode::ADD_NODE) tb->SetToolNormalBitmap(ID_ToolNode, wxBitmapBundle::FromSVGFile(resDir + sep + "add_node_selected.svg", wxSize(24, 24)));
     else if (active == ToolMode::ADD_EDGE) tb->SetToolNormalBitmap(ID_ToolEdge, wxBitmapBundle::FromSVGFile(resDir + sep + "add_edge_selected.svg", wxSize(24, 24)));
     else if (active == ToolMode::DELETE_ITEM) tb->SetToolNormalBitmap(ID_ToolDelete, wxBitmapBundle::FromSVGFile(resDir + sep + "delete_selected.svg", wxSize(24, 24)));
+}
+
+bool IsTextControlFocused() {
+    wxWindow* focused = wxWindow::FindFocus();
+    return focused && wxDynamicCast(focused, wxTextCtrl) != nullptr;
+}
+
+void MainFrame::OnCharHook(wxKeyEvent& event) {
+    // If a text box is focused, let it handle ALL its own typing normally!
+    wxWindow* focused = wxWindow::FindFocus();
+    if (focused && wxDynamicCast(focused, wxTextCtrl) != nullptr) {
+        event.Skip(); // Passes the raw keystroke down to the text box
+        return;
+    }
+
+    // Otherwise, process hotkeys!
+    int key = event.GetKeyCode();
+    bool cmdDown = event.CmdDown();
+
+    if (key == WXK_DELETE || key == WXK_BACK) {
+        m_canvas->DeleteSelectedItems();
+    }
+    else if (cmdDown && key == 'C') {
+        m_canvas->CopySelected();
+    }
+    else if (cmdDown && key == 'V') {
+        m_canvas->PasteSelected();
+    }
+    else {
+        // Not a hotkey we care about, let the system handle it normally
+        event.Skip(); 
+    }
+}
+
+void MainFrame::UpdateDynamicMenus() {
+    wxMenuBar* bar = GetMenuBar();
+    if (!bar) return;
+
+    // Are nodes selected? (Either a single node or a multi-selection)
+    bool has_nodes = (m_currently_editing_node != -1) || (m_currently_editing_node == -2);
+    
+    // Are edges selected?
+    bool has_edges = (m_currently_editing_edge != -1);
+
+    if (has_nodes && !m_is_node_menu_attached) {
+        bar->Append(m_node_menu, "&Node");
+        m_is_node_menu_attached = true;
+    } 
+    else if (!has_nodes && m_is_node_menu_attached) {
+        int pos = bar->FindMenu("&Node");
+        if (pos != wxNOT_FOUND) {
+            bar->Remove(pos); // Removes from the UI, but m_node_menu keeps it safe in memory
+            m_is_node_menu_attached = false;
+        }
+    }
+
+    if (has_edges && !m_is_edge_menu_attached) {
+        bar->Append(m_edge_menu, "&Edge");
+        m_is_edge_menu_attached = true;
+    } 
+    else if (!has_edges && m_is_edge_menu_attached) {
+        int pos = bar->FindMenu("&Edge");
+        if (pos != wxNOT_FOUND) {
+            bar->Remove(pos);
+            m_is_edge_menu_attached = false;
+        }
+    }
+}
+
+MainFrame::~MainFrame() {
+    // If the menus are currently hidden, wxWidgets doesn't own them, so we must delete them manually
+    if (!m_is_node_menu_attached && m_node_menu) {
+        delete m_node_menu;
+    }
+    if (!m_is_edge_menu_attached && m_edge_menu) {
+        delete m_edge_menu;
+    }
 }
