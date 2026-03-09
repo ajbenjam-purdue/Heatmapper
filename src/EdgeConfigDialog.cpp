@@ -26,6 +26,8 @@ EdgeConfigDialog::EdgeConfigDialog(wxWindow* parent, const MaterialLibrary& mat_
     choices.Add("Conduction: Circular");
     choices.Add("Conduction: Annulus");
     choices.Add("Conduction: Radial (Cylindrical)");
+    choices.Add("Conduction: Spherical");
+    choices.Add("Conduction: Contact Resistance");
     choices.Add("Conduction: Known Area");
     m_type_choice = new wxChoice(this, ID_TypeChoice, wxDefaultPosition, wxDefaultSize, choices);
     m_type_choice->SetSelection(0);
@@ -102,13 +104,24 @@ void EdgeConfigDialog::BuildInputs(int selection) {
         AddInputRow("Length (L) [m]:");
         AddInputRow("Inner Diameter (D1) [m]:");
         AddInputRow("Outer Diameter (D2) [m]:");
-    }// TODO: CREATE MEDIA + ADD SPHERICAL SHELL
-    else if (selection == 4) { // Conduction area (unknown shape)
+    }
+    else if (selection == 4) { // Spherical Conduction
+        m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_spherical.svg", wxSize(200, 150)).GetBitmapFor(this));
+        AddInputRow("Inner Diameter (D1) [m]:");
+        AddInputRow("Outer Diameter (D2) [m]:");
+    }
+    else if (selection == 5) { // Conduction Contact Resistance
+        m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_contact_resistance.svg", wxSize(200, 150)).GetBitmapFor(this));
+        AddInputRow("Contact Resistance (R'') [m2-K/W]:");
+        AddInputRow("Area (A) [m2]:");
+    }
+    else if (selection == 6) { // Conduction area (unknown shape)
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_area.svg", wxSize(200, 150)).GetBitmapFor(this));
         AddInputRow("Length (L) [m]:");
-        AddInputRow("Area [m2]:");
+        AddInputRow("Area (A) [m2]:");
     }
     
+    // TODO: only show for not CR
     wxBoxSizer* k_row = new wxBoxSizer(wxHORIZONTAL);
     k_row->Add(new wxStaticText(this, wxID_ANY, "Thermal Cond. (k) [W/mK]:"), 1, wxALIGN_CENTER_VERTICAL);
     m_k_input = new wxTextCtrl(this, wxID_ANY, "");
@@ -175,6 +188,16 @@ void EdgeConfigDialog::OnOK(wxCommandEvent& event) {
         m_calculated_res = std::log(vals[1] / vals[0]) / std::max(2.0 * M_PI * vals[3] * vals[2], 1e-10);
     }
     else if (sel == 4 && vals.size() == 3) {
+        // Spherical: R = (1/d1 - 1/d2) / (2 * pi * k)
+        double D_2 = std::max(vals[0], vals[1]);
+        double D_1 = std::min(vals[0], vals[1]);
+        m_calculated_res = (1.0 / D_1 - 1.0 / D_2) / std::max(2.0 * M_PI * vals[2], 1e-10);
+    }
+    else if (sel == 5 && vals.size() == 3) {
+        // Contact Resistance: R = R'' / A
+        m_calculated_res = vals[0] / std::max(vals[1], 1e-10);
+    }
+    else if (sel == 6 && vals.size() == 3) {
         // Area: R = L / (k * A)
         m_calculated_res = vals[0] / std::max(vals[1] * vals[2], 1e-10);
     }
