@@ -22,13 +22,17 @@ EdgeConfigDialog::EdgeConfigDialog(wxWindow* parent, const MaterialLibrary& mat_
 
     // Dropdown menu
     wxArrayString choices;
-    choices.Add("Conduction: Rectangular");
-    choices.Add("Conduction: Circular");
-    choices.Add("Conduction: Annulus");
+    choices.Add("Conduction: Rectangular Cross Section");
+    choices.Add("Conduction: Circular Cross Section");
+    choices.Add("Conduction: Annulus Cross Section");
     choices.Add("Conduction: Radial (Cylindrical)");
     choices.Add("Conduction: Spherical");
     choices.Add("Conduction: Contact Resistance");
-    choices.Add("Conduction: Known Area");
+    choices.Add("Conduction: Known Area Cross Section");
+    choices.Add("Shape Factor: Cylinder in Medium to Surface");
+    choices.Add("Shape Factor: Sphere in Medium to Surface");
+    choices.Add("Shape Factor: Two Parallel Cylinders in Medium");
+    choices.Add("Shape Factor: Vertical Cylinder in Medium to Surface");
     m_type_choice = new wxChoice(this, ID_TypeChoice, wxDefaultPosition, wxDefaultSize, choices);
     m_type_choice->SetSelection(0);
     main_sizer->Add(m_type_choice, 0, wxEXPAND | wxALL, 10);
@@ -53,6 +57,8 @@ EdgeConfigDialog::EdgeConfigDialog(wxWindow* parent, const MaterialLibrary& mat_
 void EdgeConfigDialog::BuildInputs(int selection) {
     m_dynamic_input_sizer->Clear(true);
     m_current_inputs.clear();
+    m_k_input = nullptr;
+    m_material_choice = nullptr;
 
     wxString resDir = wxStandardPaths::Get().GetResourcesDir();
     wxString sep = wxFileName::GetPathSeparator();
@@ -68,19 +74,22 @@ void EdgeConfigDialog::BuildInputs(int selection) {
     };
 
     // Add the Material Dropdown & custom Override
-    wxBoxSizer* mat_row = new wxBoxSizer(wxHORIZONTAL);
-    mat_row->Add(new wxStaticText(this, wxID_ANY, "Material:"), 1, wxALIGN_CENTER_VERTICAL);
-    
-    wxArrayString mat_choices;
-    for (const auto& mat : m_mat_lib.materials) {
-        mat_choices.Add(mat.name);
+    if (selection != 5)
+    {
+        wxBoxSizer* mat_row = new wxBoxSizer(wxHORIZONTAL);
+        mat_row->Add(new wxStaticText(this, wxID_ANY, "Material:"), 1, wxALIGN_CENTER_VERTICAL);
+        
+        wxArrayString mat_choices;
+        for (const auto& mat : m_mat_lib.materials) {
+            mat_choices.Add(mat.name);
+        }
+        mat_choices.Add("Custom...");
+        
+        m_material_choice = new wxChoice(this, ID_MatChoice, wxDefaultPosition, wxDefaultSize, mat_choices);
+        m_material_choice->SetSelection(0);
+        mat_row->Add(m_material_choice, 1, wxEXPAND);
+        m_dynamic_input_sizer->Add(mat_row, 0, wxEXPAND | wxBOTTOM, 5);
     }
-    mat_choices.Add("Custom...");
-    
-    m_material_choice = new wxChoice(this, ID_MatChoice, wxDefaultPosition, wxDefaultSize, mat_choices);
-    m_material_choice->SetSelection(0);
-    mat_row->Add(m_material_choice, 1, wxEXPAND);
-    m_dynamic_input_sizer->Add(mat_row, 0, wxEXPAND | wxBOTTOM, 5);
 
     if (selection == 0) { // Planar Conduction rectangular
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_rectangular.svg", wxSize(200, 150)).GetBitmapFor(this));
@@ -120,14 +129,38 @@ void EdgeConfigDialog::BuildInputs(int selection) {
         AddInputRow("Length (L) [m]:");
         AddInputRow("Area (A) [m2]:");
     }
+    else if (selection == 7) { // Cylinder in Medium to Surface
+        m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_sf_buried_isothermal_cylinder.svg", wxSize(200, 150)).GetBitmapFor(this));
+        AddInputRow("Length (L) [m]:");
+        AddInputRow("Inner Diameter (D1) [m]:");
+        AddInputRow("Outer Diameter (D2) [m]:");
+    }
+    else if (selection == 8) { // Spherical in Medium to Surface
+        m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_sf_buried_isothermal_sphere.svg", wxSize(200, 150)).GetBitmapFor(this));
+        AddInputRow("Inner Diameter (D1) [m]:");
+        AddInputRow("Outer Diameter (D2) [m]:");
+    }
+    else if (selection == 9) { // Two Cylinders in Medium
+        m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_sf_two_cylinders.svg", wxSize(200, 150)).GetBitmapFor(this));
+        AddInputRow("Contact Resistance (R'') [m2-K/W]:");
+        AddInputRow("Area (A) [m2]:");
+    }
+    else if (selection == 10) { // Vertical Cylinder in Medium to Surface
+        m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_sf_vertical_cylinder.svg", wxSize(200, 150)).GetBitmapFor(this));
+        AddInputRow("Length (L) [m]:");
+        AddInputRow("Area (A) [m2]:");
+    }
     
     // TODO: only show for not CR
-    wxBoxSizer* k_row = new wxBoxSizer(wxHORIZONTAL);
-    k_row->Add(new wxStaticText(this, wxID_ANY, "Thermal Cond. (k) [W/mK]:"), 1, wxALIGN_CENTER_VERTICAL);
-    m_k_input = new wxTextCtrl(this, wxID_ANY, "");
-    m_current_inputs.push_back(m_k_input); // Push to array so math logic still finds it at the end
-    k_row->Add(m_k_input, 1, wxEXPAND);
-    m_dynamic_input_sizer->Add(k_row, 0, wxEXPAND | wxBOTTOM, 5);
+    if (selection != 5)
+    {
+        wxBoxSizer* k_row = new wxBoxSizer(wxHORIZONTAL);
+        k_row->Add(new wxStaticText(this, wxID_ANY, "Thermal Cond. (k) [W/mK]:"), 1, wxALIGN_CENTER_VERTICAL);
+        m_k_input = new wxTextCtrl(this, wxID_ANY, "");
+        m_current_inputs.push_back(m_k_input); // Push to array so math logic still finds it at the end
+        k_row->Add(m_k_input, 1, wxEXPAND);
+        m_dynamic_input_sizer->Add(k_row, 0, wxEXPAND | wxBOTTOM, 5);
+    }
 
     // Trigger the material change to auto-fill the k box on load
     wxCommandEvent dummy;
