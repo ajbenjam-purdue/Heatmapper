@@ -10,7 +10,7 @@ enum {
 
 wxBEGIN_EVENT_TABLE(EdgeConfigDialog, wxDialog)
     EVT_CHOICE(ID_MatChoice, EdgeConfigDialog::OnMaterialChange)
-    EVT_CHOICE(wxID_ANY, EdgeConfigDialog::OnTypeChange)
+    EVT_CHOICE(ID_TypeChoice, EdgeConfigDialog::OnTypeChange)
     EVT_BUTTON(wxID_OK, EdgeConfigDialog::OnOK)
 wxEND_EVENT_TABLE()
 
@@ -41,6 +41,11 @@ EdgeConfigDialog::EdgeConfigDialog(wxWindow* parent, const MaterialLibrary& mat_
     m_svg_display = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap);
     main_sizer->Add(m_svg_display, 0, wxALIGN_CENTER | wxALL, 10);
 
+    // Warning Text
+    m_warning_text = new wxStaticText(this, wxID_ANY, "");
+    m_warning_text->SetForegroundColour(*wxRED);
+    main_sizer->Add(m_warning_text, 0, wxALIGN_CENTER | wxBOTTOM, 5);
+
     // Dynamic Sizer for text boxes
     m_dynamic_input_sizer = new wxBoxSizer(wxVERTICAL);
     main_sizer->Add(m_dynamic_input_sizer, 1, wxEXPAND | wxALL, 10);
@@ -54,24 +59,105 @@ EdgeConfigDialog::EdgeConfigDialog(wxWindow* parent, const MaterialLibrary& mat_
     BuildInputs(0); 
 }
 
+wxTextCtrl* EdgeConfigDialog::AddInputRow(const wxString& label, const std::string& key)
+{
+    wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+
+    row->Add(new wxStaticText(this, wxID_ANY, label), 1, wxALIGN_CENTER_VERTICAL);
+
+    wxTextCtrl* input = new wxTextCtrl(this, wxID_ANY, "1.0");
+
+    input->Bind(wxEVT_TEXT, &EdgeConfigDialog::OnInputChanged, this);
+
+    row->Add(input, 1, wxEXPAND);
+
+    m_dynamic_input_sizer->Add(row, 0, wxEXPAND | wxBOTTOM, 5);
+
+    m_inputs[key] = input;
+    return input;
+}
+
+double EdgeConfigDialog::GetVal(const std::string& key)
+{
+    auto it = m_inputs.find(key);
+    if (it == m_inputs.end()) return 0.0;
+
+    double v = 0.0;
+    it->second->GetValue().ToDouble(&v);
+    return v;
+}
+
+void EdgeConfigDialog::ValidateInputs()
+{
+    int sel = m_type_choice->GetSelection();
+    m_warning_text->SetLabel("");
+
+    if (sel == 7)
+    { // Cylinder in Medium to Surface
+        double L = GetVal("L");
+        double D = GetVal("D");
+        double z = GetVal("z");
+        
+        if (L < 1.5 * D)
+        {
+            m_warning_text->SetLabel(
+                "Warning: Shape factor only valid for L ≫ D.");
+        }
+    }
+    else if (sel == 8)
+    { // Sphere in Medium to Surface
+        double D = GetVal("D");
+        double z = GetVal("z");
+        
+        if (z <= D / 2.0)
+        {
+            m_warning_text->SetLabel(
+                "Warning: Shape factor only valid for z > D/2.");
+        }
+    }
+    else if (sel == 9)
+    { // Two Cylinders in Medium
+        double L = GetVal("L");
+        double D1 = GetVal("D1");
+        double D2 = GetVal("D2");
+        double w = GetVal("w");
+        
+        if ((L < 1.5 * D1) || (L < 1.5 * D2) || (L < 1.5 * w))
+        {
+            m_warning_text->SetLabel(
+                "Warning: Shape factor only valid for L ≫ D1, D2 and L ≫ w.");
+        }
+    }
+    else if (sel == 10)
+    { // Vertical Cylinder in Medium to Surface
+        double L = GetVal("L");
+        double D = GetVal("D");
+
+        if (L < D * 1.5)
+        {
+            m_warning_text->SetLabel(
+                "Warning: Shape factor only valid for L ≫ D.");
+        }
+    }
+
+    Layout();
+}
+
+void EdgeConfigDialog::OnInputChanged(wxCommandEvent& event)
+{
+    ValidateInputs();
+    event.Skip();
+}
+
 void EdgeConfigDialog::BuildInputs(int selection) {
     m_dynamic_input_sizer->Clear(true);
-    m_current_inputs.clear();
+    m_inputs.clear();
     m_k_input = nullptr;
     m_material_choice = nullptr;
 
     wxString resDir = wxStandardPaths::Get().GetResourcesDir();
     wxString sep = wxFileName::GetPathSeparator();
     wxString svg_path = resDir + sep + "assets" + sep + "resistances" + sep;
-
-    auto AddInputRow = [&](const wxString& label) {
-        wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
-        row->Add(new wxStaticText(this, wxID_ANY, label), 1, wxALIGN_CENTER_VERTICAL);
-        wxTextCtrl* input = new wxTextCtrl(this, wxID_ANY, "1.0");
-        m_current_inputs.push_back(input);
-        row->Add(input, 1, wxEXPAND);
-        m_dynamic_input_sizer->Add(row, 0, wxEXPAND | wxBOTTOM, 5);
-    };
 
     // Add the Material Dropdown & custom Override
     if (selection != 5)
@@ -93,71 +179,73 @@ void EdgeConfigDialog::BuildInputs(int selection) {
 
     if (selection == 0) { // Planar Conduction rectangular
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_rectangular.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Length (L) [m]:");
-        AddInputRow("Width (W) [m]:");
-        AddInputRow("Height (H) [m]:");
+        AddInputRow("Length (L) [m]:", "L");
+        AddInputRow("Width (W) [m]:", "W");
+        AddInputRow("Height (H) [m]:", "H");
     } 
     else if (selection == 1) { // Planar Conduction circular
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_circular_cross_section.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Length (L) [m]:");
-        AddInputRow("Diameter (D) [m]:");
+        AddInputRow("Length (L) [m]:", "L");
+        AddInputRow("Diameter (D) [m]:", "D");
     }
     else if (selection == 2) { // Planar Conduction annulus
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_donut_cross_section.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Length (L) [m]:");
-        AddInputRow("Inner Diameter (D1) [m]:");
-        AddInputRow("Outer Diameter (D2) [m]:");
+        AddInputRow("Length (L) [m]:", "L");
+        AddInputRow("Inner Diameter (D1) [m]:", "D1");
+        AddInputRow("Outer Diameter (D2) [m]:", "D2");
     }
     else if (selection == 3) { // Radial Conduction
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_radial.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Length (L) [m]:");
-        AddInputRow("Inner Diameter (D1) [m]:");
-        AddInputRow("Outer Diameter (D2) [m]:");
+        AddInputRow("Length (L) [m]:", "L");
+        AddInputRow("Inner Diameter (D1) [m]:", "D1");
+        AddInputRow("Outer Diameter (D2) [m]:", "D2");
     }
     else if (selection == 4) { // Spherical Conduction
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_spherical.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Inner Diameter (D1) [m]:");
-        AddInputRow("Outer Diameter (D2) [m]:");
+        AddInputRow("Inner Diameter (D1) [m]:", "D1");
+        AddInputRow("Outer Diameter (D2) [m]:", "D2");
     }
     else if (selection == 5) { // Conduction Contact Resistance
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_contact_resistance.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Contact Resistance (R'') [m2-K/W]:");
-        AddInputRow("Area (A) [m2]:");
+        AddInputRow("Contact Resistance (R'') [m2-K/W]:", "R''");
+        AddInputRow("Area (A) [m2]:", "A");
     }
     else if (selection == 6) { // Conduction area (unknown shape)
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_area.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Length (L) [m]:");
-        AddInputRow("Area (A) [m2]:");
+        AddInputRow("Length (L) [m]:", "L");
+        AddInputRow("Area (A) [m2]:", "A");
     }
     else if (selection == 7) { // Cylinder in Medium to Surface
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_sf_buried_isothermal_cylinder.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Length (L) [m]:");
-        AddInputRow("Inner Diameter (D1) [m]:");
-        AddInputRow("Outer Diameter (D2) [m]:");
+        AddInputRow("Length (L) [m]:", "L");
+        AddInputRow("Cylinder Depth (z) [m]:", "z");
+        AddInputRow("Cylinder Diameter (D) [m]:", "D");
     }
-    else if (selection == 8) { // Spherical in Medium to Surface
+    else if (selection == 8) { // Sphere in Medium to Surface
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_sf_buried_isothermal_sphere.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Inner Diameter (D1) [m]:");
-        AddInputRow("Outer Diameter (D2) [m]:");
+        AddInputRow("Sphere Depth (z) [m]:", "z");
+        AddInputRow("Sphere Diameter (D) [m]:", "D");
     }
     else if (selection == 9) { // Two Cylinders in Medium
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_sf_two_cylinders.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Contact Resistance (R'') [m2-K/W]:");
-        AddInputRow("Area (A) [m2]:");
+        AddInputRow("Length (L) [m]", "L");
+        AddInputRow("Diameter 1 (D1) [m]", "D1");
+        AddInputRow("Diameter 2 (D2) [m]", "D2");
+        AddInputRow("Center-Center Separation (w) [m]", "w");
     }
     else if (selection == 10) { // Vertical Cylinder in Medium to Surface
         m_svg_display->SetBitmap(wxBitmapBundle::FromSVGFile(svg_path + "conduction_sf_vertical_cylinder.svg", wxSize(200, 150)).GetBitmapFor(this));
-        AddInputRow("Length (L) [m]:");
-        AddInputRow("Area (A) [m2]:");
+        AddInputRow("Length (L) [m]:", "L");
+        AddInputRow("Cylinder Diameter (D) [m]:", "D");
     }
     
-    // TODO: only show for not CR
+    // Only show for not CR
     if (selection != 5)
     {
         wxBoxSizer* k_row = new wxBoxSizer(wxHORIZONTAL);
         k_row->Add(new wxStaticText(this, wxID_ANY, "Thermal Cond. (k) [W/mK]:"), 1, wxALIGN_CENTER_VERTICAL);
         m_k_input = new wxTextCtrl(this, wxID_ANY, "");
-        m_current_inputs.push_back(m_k_input); // Push to array so math logic still finds it at the end
+        m_inputs["k"] = m_k_input; // Push to array so math logic still finds it at the end
         k_row->Add(m_k_input, 1, wxEXPAND);
         m_dynamic_input_sizer->Add(k_row, 0, wxEXPAND | wxBOTTOM, 5);
     }
@@ -194,45 +282,128 @@ void EdgeConfigDialog::OnOK(wxCommandEvent& event) {
     int sel = m_type_choice->GetSelection();
     
     // Read all strings from the dynamic inputs and convert to doubles
-    std::vector<double> vals;
-    for (auto* ctrl : m_current_inputs) {
-        double v = 0.0;
-        ctrl->GetValue().ToDouble(&v);
-        vals.push_back(v);
-    }
+    // std::vector<double> vals;
+    // for (auto* ctrl : m_inputs) {
+    //     double v = 0.0;
+    //     ctrl->GetValue().ToDouble(&v);
+    //     vals.push_back(v);
+    // }
 
-    // Actual res calc
-    if (sel == 0 && vals.size() == 4) {
+    // Just read directly with new helper
+
+    // Actual resistance calculation
+    if (sel == 0) 
+    {
         // Rectangular: R = L / (k * W * H)
-        m_calculated_res = vals[0] / std::max(vals[3] * vals[1] * vals[2], 1e-10); // I genuinely think I get this wrong every time I do it. crazy!
-    } 
-    else if (sel == 1 && vals.size() == 3) {
+        double L = GetVal("L");
+        double W = GetVal("W");
+        double H = GetVal("H");
+        double k = GetVal("k");
+
+        m_calculated_res = L / std::max(k * W * H, 1e-10);
+    }
+    else if (sel == 1)
+    {
         // Circular: R = 4L / (k * pi * d^2)
-        m_calculated_res = 4.0 * vals[0] / std::max(vals[2] * M_PI * vals[1] * vals[1], 1e-10);
+        double L = GetVal("L");
+        double D = GetVal("D");
+        double k = GetVal("k");
+
+        m_calculated_res = 4.0 * L / std::max(k * M_PI * D * D, 1e-10);
     }
-    else if (sel == 2 && vals.size() == 4) {
-        // Annulus: R = 4L / (k * pi * (d_2^2-d_1^2))
-        double D_2 = std::max(vals[1], vals[2]);
-        double D_1 = std::min(vals[1], vals[2]);
-        m_calculated_res = 4.0 * vals[0] / std::max(vals[3] * M_PI * (D_2 * D_2 - D_1 * D_1), 1e-10);
+    else if (sel == 2)
+    {
+        // Annulus: R = 4L / (k * pi * (d2^2 - d1^2))
+        double L = GetVal("L");
+        double D1 = GetVal("D1");
+        double D2 = GetVal("D2");
+        double k = GetVal("k");
+
+        double D_outer = std::max(D1, D2);
+        double D_inner = std::min(D1, D2);
+
+        m_calculated_res = 4.0 * L /
+            std::max(k * M_PI * (D_outer * D_outer - D_inner * D_inner), 1e-10);
     }
-    else if (sel == 3 && vals.size() == 4) {
-        // Radial (Cylinder): R = ln(d2/d1) / (2 * pi * k * L)
-        m_calculated_res = std::log(vals[1] / vals[0]) / std::max(2.0 * M_PI * vals[3] * vals[2], 1e-10);
+    else if (sel == 3)
+    {
+        // Radial (Cylinder): R = ln(d2/d1) / (2*pi*k*L)
+        double D1 = GetVal("D1");
+        double D2 = GetVal("D2");
+        double L = GetVal("L");
+        double k = GetVal("k");
+
+        double D_outer = std::max(D1, D2);
+        double D_inner = std::min(D1, D2);
+
+        m_calculated_res = std::log(D_outer / D_inner) /
+            std::max(2.0 * M_PI * k * L, 1e-10);
     }
-    else if (sel == 4 && vals.size() == 3) {
-        // Spherical: R = (1/d1 - 1/d2) / (2 * pi * k)
-        double D_2 = std::max(vals[0], vals[1]);
-        double D_1 = std::min(vals[0], vals[1]);
-        m_calculated_res = (1.0 / D_1 - 1.0 / D_2) / std::max(2.0 * M_PI * vals[2], 1e-10);
+    else if (sel == 4)
+    {
+        // Spherical: R = (1/d1 - 1/d2) / (2*pi*k)
+        double D1 = GetVal("D1");
+        double D2 = GetVal("D2");
+        double k = GetVal("k");
+
+        double D_outer = std::max(D1, D2);
+        double D_inner = std::min(D1, D2);
+
+        m_calculated_res =
+            (1.0 / D_inner - 1.0 / D_outer) /
+            std::max(2.0 * M_PI * k, 1e-10);
     }
-    else if (sel == 5 && vals.size() == 3) {
+    else if (sel == 5)
+    {
         // Contact Resistance: R = R'' / A
-        m_calculated_res = vals[0] / std::max(vals[1], 1e-10);
+        double Rpp = GetVal("Rpp");
+        double A = GetVal("A");
+
+        m_calculated_res = Rpp / std::max(A, 1e-10);
     }
-    else if (sel == 6 && vals.size() == 3) {
-        // Area: R = L / (k * A)
-        m_calculated_res = vals[0] / std::max(vals[1] * vals[2], 1e-10);
+    else if (sel == 6)
+    {
+        // Known Area: R = L / (k * A)
+        double L = GetVal("L");
+        double A = GetVal("A");
+        double k = GetVal("k");
+
+        m_calculated_res = L / std::max(k * A, 1e-10);
+    }
+    else if (sel == 7) 
+    { // Cylinder in Medium to Surface: S = 2 pi L / ln(4z/D)
+        double D = GetVal("D");
+        double z = GetVal("z");
+        double L = GetVal("L");
+        double S = (2.0 * M_PI * L) / std::log(4.0 * z / D);
+        
+        m_calculated_res = 1.0 / (S * GetVal("k"));
+    }
+    else if (sel == 8) 
+    { // Sphere in Medium to Surface: S = 2 pi D / (1 - D/4z)
+        double D = GetVal("D");
+        double z = GetVal("z");
+        double S = (2.0 * M_PI * D) / (1 - D / (4.0 * z));
+        
+        m_calculated_res = 1.0 / (S * GetVal("k"));
+    }
+    else if (sel == 9) 
+    { // Two Cylinders in Medium: I'm not writing it twice
+        double L = GetVal("L");
+        double D1 = GetVal("D1");
+        double D2 = GetVal("D2");
+        double w = GetVal("w");
+        double S = 2.0 * M_PI * L / std::acosh((4.0 * w * w - D1 * D1 - D2 * D2) / (2.0 * D1 * D2));
+        
+        m_calculated_res = 1.0 / (S * GetVal("k"));
+    }
+    else if (sel == 10) 
+    { // Vertical Cylinder in Medium to Surface: S = (2 pi L) / ln(4L/D)
+        double D = GetVal("D");
+        double L = GetVal("L");
+        double S = 2.0 * M_PI * L / std::log(4.0 * L / D);
+        
+        m_calculated_res = 1.0 / (S * GetVal("k"));
     }
 
     event.Skip(); // Allow the dialog to close normally

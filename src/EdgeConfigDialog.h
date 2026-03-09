@@ -17,8 +17,9 @@ private:
     wxStaticBitmap* m_svg_display;
     wxBoxSizer* m_dynamic_input_sizer;
     
-    std::vector<wxTextCtrl*> m_current_inputs; 
-    wxTextCtrl* m_k_input = nullptr; // Track the 'k' box specifically!
+    std::unordered_map<std::string, wxTextCtrl*> m_inputs;
+    wxTextCtrl* m_k_input = nullptr; // Track the 'k' box specifically
+    wxStaticText* m_warning_text; // Warnng text for deviations from correlation
     
     double m_calculated_res = 0.0;
 
@@ -27,6 +28,10 @@ private:
     void OnOK(wxCommandEvent& event);
     
     void BuildInputs(int selection);
+    void ValidateInputs();
+    void OnInputChanged(wxCommandEvent& event);
+    wxTextCtrl* AddInputRow(const wxString& label, const std::string& key);
+    double GetVal(const std::string& key);
 
     wxDECLARE_EVENT_TABLE();
 };

@@ -107,7 +107,9 @@ private:
     {
         materials = {
             Material("Aluminum 6061", 2700.0, 896.0, 167.0),
-            Material("304 Stainless Steel", 8000.0, 500.0, 16.2)
+            Material("304 Stainless Steel", 8000.0, 500.0, 16.2),
+            Material("Water", 1000.0, 4187.0, 600.0),
+            Material("Air", 1.276, 1006.0, 0.02435)
         };
     }
 };
