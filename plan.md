@@ -15,6 +15,7 @@ No dates. Things will come when they come.
     - Select an edge resistance based on context: R'' + cross sectional area, simple convection, conduction, radiation, fin arrays, etc
     - Maybe look into natural convection, employ the use of Bergman et. al correlations
     - Unified, clean, dark svg graphics depicting the situation at hand (planar surface, fins, ...)
+    - Scenarios: (Conduction) contact resistance (117), spherical shell (143), shape factors (235+); (Convection:External) Single fin, fin array flat plate in parallel flow, cylinder in cross flow, other shapes in cross flow, sphere (calculated or assumed h) (159+, 437, 455, 459, 465); (Radiation) very work-in-progress
 
 3. Transient analysis
 
