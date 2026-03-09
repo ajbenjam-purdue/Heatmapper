@@ -3,18 +3,22 @@
 #include <wx/artprov.h>
 #include <format>
 #include "ThermalNetwork.h"
+#include "MaterialLibrary.h"
 
 class ThermalCanvas; // Fwd declaration
 
 class MainFrame : public wxFrame {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
+    ~MainFrame(); // destructor method
+    
+    MaterialLibrary m_materials;
+
     void ShowNodeProperties(int node_id);
     void ResetPropertiesWindow();
     void ShowEdgeProperties(int edge_index);
     void ForceSelectTool();
     void UpdateToolbarIcons();
-    ~MainFrame(); // destructor (necessary for mem leak prevention)
     void UpdateDynamicMenus();
 
 private:

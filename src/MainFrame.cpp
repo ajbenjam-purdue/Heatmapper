@@ -57,7 +57,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         : wxFrame(NULL, wxID_ANY, title, pos, size), 
           m_active_network("Workspace Network") { // Initialize the empty network
     
-
     // Windows application icon
     #if defined(__WXMSW__)
         SetIcon(wxICON(AppIcon));
@@ -65,6 +64,22 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
     // Build the Canvas
     m_canvas = new ThermalCanvas(this);
+
+    // Materials lib build-out
+    wxString userDataDir = wxStandardPaths::Get().GetUserDataDir();
+    wxString sep = wxFileName::GetPathSeparator();
+    
+    // Ensure folder exists before trying a write
+    std::filesystem::path dir(userDataDir.ToStdString());
+    if (!std::filesystem::exists(dir)) {
+        std::filesystem::create_directories(dir);
+    }
+
+    // Construct the absolute path to materials.json
+    wxString matFilePath = userDataDir + sep + "materials.json";
+
+    // Load it
+    m_materials.load_json(matFilePath.ToStdString());
 
     // Properties panel
     wxPanel* properties_panel = new wxPanel(this);
@@ -161,7 +176,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
     // Get asset paths
     wxString resDir = wxStandardPaths::Get().GetResourcesDir();
-    wxString sep = wxFileName::GetPathSeparator(); 
 
     // Load SVGs
     wxToolBar* toolBar = CreateToolBar(wxTB_FLAT | wxTB_NODIVIDER | wxBORDER_NONE);
@@ -524,7 +538,7 @@ MainFrame::~MainFrame() {
 void MainFrame::OnEdgeConfigButtonClicked(wxCommandEvent& event) {
     if (m_currently_editing_edge == -1) return;
 
-    EdgeConfigDialog dialog(this);
+    EdgeConfigDialog dialog(this, m_materials);
     
     // ShowModal() pauses the app
     if (dialog.ShowModal() == wxID_OK) { // Update if OK was hit
