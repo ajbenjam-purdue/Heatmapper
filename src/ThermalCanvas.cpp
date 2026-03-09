@@ -74,9 +74,9 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
 
         gc->StrokeLine(x1, y1, x2, y2);
         double edge_flux = m_network->get_edge_flux(i);
-        if (edge_flux != 0.0) // Flux exists, draw arrow
+        if (std::abs(edge_flux) > 1e-6) // Flux exists, draw arrow
         {
-            double arrow_amplitude = std::min(distance_cartesian(x1, y1, x2, y2) * 0.3 - 10, 10.0);
+            double arrow_amplitude = std::min(distance_cartesian(x1, y1, x2, y2) * 0.3 - 10, 6.0);
             auto [cx, cy, dx, dy] = line_info(x1, y1, x2, y2); 
             if (!std::signbit(edge_flux))
             {

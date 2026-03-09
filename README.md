@@ -1,4 +1,5 @@
 # Heatmapper
+### Version 0.1.5 | March 8, 2026
 (Ideally) cross platform GUI Heatmapper tool
 
 Create build dir:

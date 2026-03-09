@@ -1,6 +1,7 @@
 #include "MainFrame.h"
 #include "ThermalCanvas.h"
 #include "ThermalSolver.h"
+#include "EdgeConfigDialog.h"
 #include <fstream>
 #include <wx/bmpbndl.h>
 #include <wx/filename.h>
@@ -19,7 +20,8 @@ enum {
     ID_ToolSelect = wxID_HIGHEST + 4,
     ID_ToolNode = wxID_HIGHEST + 5,
     ID_ToolEdge = wxID_HIGHEST + 6,
-    ID_ToolDelete = wxID_HIGHEST + 7
+    ID_ToolDelete = wxID_HIGHEST + 7,
+    ID_OpenEdgeConfig = wxID_HIGHEST + 8
 };
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -30,6 +32,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_BUTTON(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
+    EVT_BUTTON(ID_OpenEdgeConfig, MainFrame::OnEdgeConfigButtonClicked)
     EVT_TOOL(ID_ToolSelect, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolNode, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolEdge, MainFrame::OnToolSelect)
@@ -65,6 +68,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
     // Properties panel
     wxPanel* properties_panel = new wxPanel(this);
+    properties_panel->SetMinSize(wxSize(250, -1)); // resize
     wxBoxSizer* properties_sizer = new wxBoxSizer(wxVERTICAL); // Sizer for panel
     wxButton* run_ss_button = new wxButton(properties_panel, ID_RunSteadyState, "Solve Steady State");
     wxButton* run_tr_button = new wxButton(properties_panel, ID_RunTransient, "Transient Analysis");
@@ -95,8 +99,10 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     m_flow_disp_label = new wxStaticText(properties_panel, wxID_ANY, "Calculated Heat Flow (W):");
     properties_sizer->Add(m_flow_disp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
     m_flow_disp = new wxTextCtrl(properties_panel, wxID_ANY, "");
-    m_flow_disp->Disable();
+    m_flow_disp->Disable(); // Make nonfunctional (view only)
     properties_sizer->Add(m_flow_disp, 0, wxALL | wxEXPAND, 5);
+    m_edge_config_button = new wxButton(properties_panel, ID_OpenEdgeConfig, "Open Edge Configuration Tool");
+    properties_sizer->Add(m_edge_config_button, 0, wxALL | wxEXPAND, 8);
 
     // Give this button a new custom ID like ID_ApplyProperties
     m_apply_button = new wxButton(properties_panel, ID_ApplyProperties, "Apply Changes");
@@ -253,6 +259,7 @@ void MainFrame::ResetPropertiesWindow() {
     m_thermal_res_label->Hide();
     m_flow_disp->Hide();
     m_flow_disp_label->Hide();
+    m_edge_config_button->Hide();
     m_apply_button->Hide();
 
     this->Layout(); // Update layout
@@ -298,6 +305,7 @@ void MainFrame::ShowNodeProperties(int node_id) {
     m_thermal_res_label->Hide();
     m_flow_disp->Hide();
     m_flow_disp_label->Hide();
+    m_edge_config_button->Hide();
 
     // Grab the node and populate the text boxes
     ThermalNode& node = m_active_network.network_nodes[node_id];
@@ -328,6 +336,7 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
     m_thermal_res_label->Show();
     m_flow_disp->Show();
     m_flow_disp_label->Show();
+    m_edge_config_button->Show();
     m_apply_button->Show();
 
     // Ensure node properties stay hidden
@@ -393,8 +402,8 @@ void MainFrame::OnApplyProperties(wxCommandEvent& event) {
         
         double new_res;
         if (m_res_input->GetValue().ToDouble(&new_res)) {
-            // Assign directly -> stand in. TODO: CHANGE TO COMPLEX DROPDOWN
-            edge.params = PureResistance{std::max(new_res, 1e-10)}; 
+            // Assign directly -> stand in
+            edge.params = PureResistance{std::max(new_res, 1e-8)}; 
         }
     }
     // Tell the canvas to redraw with the new numbers
@@ -422,17 +431,17 @@ void MainFrame::UpdateToolbarIcons() {
     wxToolBar* tb = GetToolBar();
     
     // Reset everything to the default, inactive SVGs
-    tb->SetToolNormalBitmap(ID_ToolSelect, wxBitmapBundle::FromSVGFile(resDir + sep + "select.svg", wxSize(24, 24)));
-    tb->SetToolNormalBitmap(ID_ToolNode, wxBitmapBundle::FromSVGFile(resDir + sep + "add_node.svg", wxSize(24, 24)));
-    tb->SetToolNormalBitmap(ID_ToolEdge, wxBitmapBundle::FromSVGFile(resDir + sep + "add_edge.svg", wxSize(24, 24)));
-    tb->SetToolNormalBitmap(ID_ToolDelete, wxBitmapBundle::FromSVGFile(resDir + sep + "delete.svg", wxSize(24, 24)));
+    tb->SetToolNormalBitmap(ID_ToolSelect, wxBitmapBundle::FromSVGFile(resDir + sep + "assets" + sep + "select.svg", wxSize(24, 24)));
+    tb->SetToolNormalBitmap(ID_ToolNode, wxBitmapBundle::FromSVGFile(resDir + sep + "assets" + sep + "add_node.svg", wxSize(24, 24)));
+    tb->SetToolNormalBitmap(ID_ToolEdge, wxBitmapBundle::FromSVGFile(resDir + sep + "assets" + sep + "add_edge.svg", wxSize(24, 24)));
+    tb->SetToolNormalBitmap(ID_ToolDelete, wxBitmapBundle::FromSVGFile(resDir + sep + "assets" + sep + "delete.svg", wxSize(24, 24)));
 
     // Overwrite the currently active tool with its "_selected" version
     ToolMode active = m_canvas->m_current_tool;
-    if (active == ToolMode::SELECT) tb->SetToolNormalBitmap(ID_ToolSelect, wxBitmapBundle::FromSVGFile(resDir + sep + "select_selected.svg", wxSize(24, 24)));
-    else if (active == ToolMode::ADD_NODE) tb->SetToolNormalBitmap(ID_ToolNode, wxBitmapBundle::FromSVGFile(resDir + sep + "add_node_selected.svg", wxSize(24, 24)));
-    else if (active == ToolMode::ADD_EDGE) tb->SetToolNormalBitmap(ID_ToolEdge, wxBitmapBundle::FromSVGFile(resDir + sep + "add_edge_selected.svg", wxSize(24, 24)));
-    else if (active == ToolMode::DELETE_ITEM) tb->SetToolNormalBitmap(ID_ToolDelete, wxBitmapBundle::FromSVGFile(resDir + sep + "delete_selected.svg", wxSize(24, 24)));
+    if (active == ToolMode::SELECT) tb->SetToolNormalBitmap(ID_ToolSelect, wxBitmapBundle::FromSVGFile(resDir + sep + "assets" + sep + "select_selected.svg", wxSize(24, 24)));
+    else if (active == ToolMode::ADD_NODE) tb->SetToolNormalBitmap(ID_ToolNode, wxBitmapBundle::FromSVGFile(resDir + sep + "assets" + sep + "add_node_selected.svg", wxSize(24, 24)));
+    else if (active == ToolMode::ADD_EDGE) tb->SetToolNormalBitmap(ID_ToolEdge, wxBitmapBundle::FromSVGFile(resDir + sep + "assets" + sep + "add_edge_selected.svg", wxSize(24, 24)));
+    else if (active == ToolMode::DELETE_ITEM) tb->SetToolNormalBitmap(ID_ToolDelete, wxBitmapBundle::FromSVGFile(resDir + sep + "assets" + sep + "delete_selected.svg", wxSize(24, 24)));
 }
 
 bool IsTextControlFocused() {
@@ -503,11 +512,29 @@ void MainFrame::UpdateDynamicMenus() {
 }
 
 MainFrame::~MainFrame() {
-    // If the menus are currently hidden, wxWidgets doesn't own them, so we must delete them manually
+    // If the menus are currently hidden, wxWidgets doesn't own them, so they must be deleted manually
     if (!m_is_node_menu_attached && m_node_menu) {
         delete m_node_menu;
     }
     if (!m_is_edge_menu_attached && m_edge_menu) {
         delete m_edge_menu;
+    }
+}
+
+void MainFrame::OnEdgeConfigButtonClicked(wxCommandEvent& event) {
+    if (m_currently_editing_edge == -1) return;
+
+    EdgeConfigDialog dialog(this);
+    
+    // ShowModal() pauses the app
+    if (dialog.ShowModal() == wxID_OK) { // Update if OK was hit
+        double new_r = dialog.GetCalculatedResistance();
+        
+        // Update UI text box so the user sees the new number and apply to the node
+        m_res_input->SetValue(wxString::Format("%.4f", new_r));
+        
+        // Unsure of how to tackle radiative resistances atm
+        m_active_network.network_edges[m_currently_editing_edge].params = PureResistance{new_r};
+        m_canvas->Refresh();
     }
 }

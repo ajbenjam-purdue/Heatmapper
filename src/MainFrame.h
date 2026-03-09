@@ -29,6 +29,7 @@ private:
 
     wxStaticText* m_flow_disp_label; // Label for edge's measured heat flux
     wxTextCtrl* m_flow_disp; // Actual number
+    wxButton* m_edge_config_button; // Open configuration window button
 
     wxButton* m_apply_button; // Apply button
 
@@ -52,6 +53,7 @@ private:
     void OnApplyProperties(wxCommandEvent& event);
     void OnToolSelect(wxCommandEvent& event);
     void OnCharHook(wxKeyEvent& event);
+    void OnEdgeConfigButtonClicked(wxCommandEvent& event);
 
     wxMenu* m_node_menu = nullptr;
     wxMenu* m_edge_menu = nullptr;

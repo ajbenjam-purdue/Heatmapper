@@ -49,20 +49,33 @@ endif()
 # ==========================================
 # 3. ASSET PACKAGING
 # ==========================================
-file(GLOB SVG_ICONS "assets/*.svg") 
+file(GLOB_RECURSE ALL_ASSETS "assets/*") 
 
 if(APPLE)
-    # Bundle the Mac icon AND the SVGs into the Resources folder
-    set(APP_ASSETS "assets/icon.icns" ${SVG_ICONS})
-    set_source_files_properties(${APP_ASSETS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+    # Loop through every asset and tell macOS to perfectly mirror the folder structure!
+    foreach(ASSET_FILE ${ALL_ASSETS})
+        file(RELATIVE_PATH REL_DIR "${CMAKE_CURRENT_SOURCE_DIR}" "${ASSET_FILE}")
+        get_filename_component(DEST_DIR "${REL_DIR}" DIRECTORY)
+        
+        # This puts files into Resources/assets/ or Resources/assets/resistances/
+        set_source_files_properties("${ASSET_FILE}" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/${DEST_DIR}")
+    endforeach()
+    
+    # If you have a specific Mac app icon, override it to sit at the absolute root of Resources
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.icns")
+        set_source_files_properties("assets/icon.icns" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+    endif()
+
+    set(APP_ASSETS ${ALL_ASSETS})
+    
 elseif(WIN32)
-    # Generate the Windows icon resource
+    # Automatically generate a flawless resource file with the absolute, full path!
     set(RC_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/generated_resource.rc")
     file(WRITE ${RC_FILE_PATH} "AppIcon ICON \"${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.ico\"\n")
-    set(APP_ASSETS ${RC_FILE_PATH} ${SVG_ICONS})
+    set(APP_ASSETS ${RC_FILE_PATH} ${ALL_ASSETS})
 
-    # Tell CMake to physically copy the SVGs to the MSVC Release folder!
-    file(COPY ${SVG_ICONS} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
+    # Tell CMake to physically copy the directories to the MSVC Release folder!
+    file(COPY "assets" DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
 endif()
 
 # ==========================================
@@ -76,6 +89,7 @@ add_executable(Heatmapper WIN32 MACOSX_BUNDLE
     src/ThermalNetwork.cpp
     src/ThermalSolver.cpp
     src/ThermalCanvas.cpp
+    src/EdgeConfigDialog.cpp
     ${APP_ASSETS} # <-- Pass the OS-specific asset variable here!
 )
 

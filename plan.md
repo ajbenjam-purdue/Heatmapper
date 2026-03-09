@@ -14,6 +14,7 @@ No dates. Things will come when they come.
 
     - Select an edge resistance based on context: R'' + cross sectional area, simple convection, conduction, radiation, fin arrays, etc
     - Maybe look into natural convection, employ the use of Bergman et. al correlations
+    - Unified, clean, dark svg graphics depicting the situation at hand (planar surface, fins, ...)
 
 3. Transient analysis
 
@@ -22,5 +23,8 @@ No dates. Things will come when they come.
 
 ### Fixes
 
-[ ] CRASH: After clearing a workspace, shift-clicking with the create node tool results in a segfault
-[ ] NONFUNCTIONAL: Confirmation for clearance of workspace doesnt work (N>4)
+[ ] CRASH: After clearing a workspace, shift-clicking with the create node tool results in a segfault (TODO: CHECK ON THIS)
+
+[x] NONFUNCTIONAL: Confirmation for clearance of workspace doesnt work (N>4)
+
+[ ] BUG: Edges not loading/saving correctly
