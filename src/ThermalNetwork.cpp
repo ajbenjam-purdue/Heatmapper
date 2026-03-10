@@ -159,7 +159,14 @@ ThermalNetwork ThermalNetwork::from_json(const json& j) {
                 node.applyHeatLoad(node_json["load"]);
             }
 
-            new_network.add_node(node);
+            // dodge add_node() to preserve the exact historical ID
+            int original_id = node_json["id"];
+            new_network.network_nodes[original_id] = node;
+
+            // Push the network's internal ID counter safely past this node
+            if (original_id >= new_network.next_node_id) {
+                new_network.next_node_id = original_id + 1;
+            }
         }
     }
 
