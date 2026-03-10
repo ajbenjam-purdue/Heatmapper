@@ -90,6 +90,7 @@ add_executable(Heatmapper WIN32 MACOSX_BUNDLE
     src/ThermalSolver.cpp
     src/ThermalCanvas.cpp
     src/EdgeConfigDialog.cpp
+    src/DiscretizeDialog.cpp
     ${APP_ASSETS} # <-- Pass the OS-specific asset variable here!
 )
 

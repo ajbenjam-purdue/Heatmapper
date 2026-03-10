@@ -58,7 +58,8 @@ private:
     void OnToolSelect(wxCommandEvent& event);
     void OnCharHook(wxKeyEvent& event);
     void OnEdgeConfigButtonClicked(wxCommandEvent& event);
-
+    void OnDiscretizeButtonClicked(wxCommandEvent& event);
+    
     wxMenu* m_node_menu = nullptr;
     wxMenu* m_edge_menu = nullptr;
     bool m_is_node_menu_attached = false;

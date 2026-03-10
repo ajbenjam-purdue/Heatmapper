@@ -2,6 +2,7 @@
 #include "ThermalCanvas.h"
 #include "ThermalSolver.h"
 #include "EdgeConfigDialog.h"
+#include "DiscretizeDialog.h"
 #include <fstream>
 #include <wx/bmpbndl.h>
 #include <wx/filename.h>
@@ -21,7 +22,8 @@ enum {
     ID_ToolNode = wxID_HIGHEST + 5,
     ID_ToolEdge = wxID_HIGHEST + 6,
     ID_ToolDelete = wxID_HIGHEST + 7,
-    ID_OpenEdgeConfig = wxID_HIGHEST + 8
+    ID_OpenEdgeConfig = wxID_HIGHEST + 8,
+    ID_OpenDiscretizer = wxID_HIGHEST + 9
 };
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -33,6 +35,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_BUTTON(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
     EVT_BUTTON(ID_OpenEdgeConfig, MainFrame::OnEdgeConfigButtonClicked)
+    EVT_MENU(ID_OpenDiscretizer, MainFrame::OnDiscretizeButtonClicked)
     EVT_TOOL(ID_ToolSelect, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolNode, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolEdge, MainFrame::OnToolSelect)
@@ -161,7 +164,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
     // Create the contextual menus (But don't append them to the bar yet)
     m_node_menu = new wxMenu;
-    m_node_menu->Append(wxID_ANY, "Remove Constraints\tCtrl-T", "Unlock the temperature and remove any external flux for the selected node(s)");
+    m_node_menu->Append(ID_OpenDiscretizer, "Discretize Node\tCtrl-D", "Replace single node with a multi-node representation of an object");
 
     m_edge_menu = new wxMenu;
     m_edge_menu->Append(wxID_ANY, "Set Perfect Conductor", "Drop thermal resistance to zero");
@@ -535,13 +538,15 @@ MainFrame::~MainFrame() {
     }
 }
 
-void MainFrame::OnEdgeConfigButtonClicked(wxCommandEvent& event) {
+void MainFrame::OnEdgeConfigButtonClicked(wxCommandEvent& event)
+{
     if (m_currently_editing_edge == -1) return;
 
     EdgeConfigDialog dialog(this, m_materials);
     
     // ShowModal() pauses the app
-    if (dialog.ShowModal() == wxID_OK) { // Update if OK was hit
+    if (dialog.ShowModal() == wxID_OK)
+    { // Update if OK was hit
         double new_r = dialog.GetCalculatedResistance();
         
         // Update UI text box so the user sees the new number and apply to the node
@@ -549,6 +554,110 @@ void MainFrame::OnEdgeConfigButtonClicked(wxCommandEvent& event) {
         
         // Unsure of how to tackle radiative resistances atm
         m_active_network.network_edges[m_currently_editing_edge].params = PureResistance{new_r};
+        m_canvas->Refresh();
+    }
+}
+
+void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event) {
+    if (m_currently_editing_node < 0) return;
+
+    DiscretizeDialog dialog(this, m_materials);
+    
+    if (dialog.ShowModal() == wxID_OK) {
+
+        // Extract information if the user clicked ok and not cancel/esc
+        int type = dialog.GetDiscretizationType();
+        int N = std::max(1, dialog.GetN());
+        int M = std::max(1, dialog.GetM());
+        double R = std::max(dialog.GetInternalResistance(), 1e-8);
+
+        // Capture the original node properties
+        ThermalNode old_node = m_active_network.network_nodes[m_currently_editing_node];
+        int old_id = old_node.node_id;
+        
+        // Calculate the physical fractions
+        int total_new_nodes = (type == 2) ? (N * M) : ((type == 1) ? (N + 1) : N);
+        double sub_mass = old_node.property_mass / total_new_nodes;
+        double sub_load = old_node.ext_load / total_new_nodes;
+
+        // Clear the old node from memory (but keep the edges untouched for a moment)
+        m_active_network.network_nodes.erase(old_id);
+        m_canvas->m_sel_node_ids.clear();
+        ResetPropertiesWindow();
+
+        std::vector<int> new_ids;
+
+        // Generate the Sub-Network
+        if (type == 0) { 
+            // N-Node Chain
+            for (int i = 0; i < N; ++i) {
+                double nx = old_node.canvas_position_x + (i - N/2.0) * 0.08; 
+                ThermalNode nn(nx, old_node.canvas_position_y, sub_mass, old_node.property_specific_heat, 
+                               old_node.property_label + "_ch" + std::to_string(i), 0, old_node.node_temperature);
+                nn.ext_load = sub_load;
+                if (old_node.is_fixed_temperature) nn.fixTemperature(old_node.node_temperature);
+                new_ids.push_back(m_active_network.add_node(nn));
+            }
+            // Wire together
+            for (int i = 0; i < N - 1; ++i) {
+                m_active_network.add_edge(ThermalEdge(new_ids[i], new_ids[i+1], PureResistance{R}));
+            }
+        }
+        else if (type == 1) { 
+            // N-Node Centralized Hub (Center node + N surrounding spokes)
+            ThermalNode center(old_node.canvas_position_x, old_node.canvas_position_y, sub_mass, old_node.property_specific_heat, 
+                               old_node.property_label + "_hub", 0, old_node.node_temperature);
+            center.ext_load = sub_load;
+            if (old_node.is_fixed_temperature) center.fixTemperature(old_node.node_temperature);
+            int center_id = m_active_network.add_node(center);
+            new_ids.push_back(center_id);
+
+            for (int i = 0; i < N; ++i) {
+                double angle = (2.0 * M_PI * i) / N;
+                double nx = old_node.canvas_position_x + std::cos(angle) * 0.08;
+                double ny = old_node.canvas_position_y + std::sin(angle) * 0.08;
+                
+                ThermalNode spoke(nx, ny, sub_mass, old_node.property_specific_heat, 
+                                  old_node.property_label + "_sp" + std::to_string(i), 0, old_node.node_temperature);
+                spoke.ext_load = sub_load;
+                if (old_node.is_fixed_temperature) spoke.fixTemperature(old_node.node_temperature);
+                
+                int spoke_id = m_active_network.add_node(spoke);
+                new_ids.push_back(spoke_id);
+                m_active_network.add_edge(ThermalEdge(center_id, spoke_id, PureResistance{R}));
+            }
+        }
+        else if (type == 2) { 
+            // NxM Comb (N teeth, M nodes deep)
+            for (int i = 0; i < N; ++i) {
+                for (int j = 0; j < M; ++j) { // Default sep 0.08. Will parametrize later
+                    double nx = old_node.canvas_position_x + (i - N/2.0) * 0.08; 
+                    double ny = old_node.canvas_position_y + (j * 0.08);
+                    ThermalNode nn(nx, ny, sub_mass, old_node.property_specific_heat, 
+                                   old_node.property_label + "_c" + std::to_string(i) + "-" + std::to_string(j), 0, old_node.node_temperature);
+                    nn.ext_load = sub_load;
+                    if (old_node.is_fixed_temperature) nn.fixTemperature(old_node.node_temperature);
+                    
+                    int id = m_active_network.add_node(nn);
+                    new_ids.push_back(id);
+
+                    // Wire vertical teeth
+                    if (j > 0) m_active_network.add_edge(ThermalEdge(new_ids.back() - 1, new_ids.back(), PureResistance{R}));
+                    // Wire the horizontal spine (only at j==0)
+                    if (j == 0 && i > 0) m_active_network.add_edge(ThermalEdge(new_ids[new_ids.size() - 1 - M], new_ids.back(), PureResistance{R}));
+                }
+            }
+        }
+
+        // Re-wire the dangling edges
+        // Root of the new mesh is new_ids[0] -> basis for all other nodes
+        int root_id = new_ids[0];
+        
+        for (ThermalEdge& edge : m_active_network.network_edges) {
+            if (edge.id_0 == old_id) edge.id_0 = root_id;
+            if (edge.id_1 == old_id) edge.id_1 = root_id;
+        }
+
         m_canvas->Refresh();
     }
 }
