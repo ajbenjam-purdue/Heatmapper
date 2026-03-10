@@ -13,25 +13,38 @@ enum class EdgeType {
 };
 
 struct ConductionUniform {
+    // m
     double length;
+
+    // w/m-K
     double k;
+
+    // m2
     double area;
 };
 
 struct ConvectionUniform {
+    // w/m2-K
     double h;
+
+    // m2
     double area;
 };
 
-// NOT DONE
 struct RadiationUniform {
-    double h;
+    // [-]
+    double epsilon;
+
+    // m2
     double area;
 };
 
 struct PureResistance {
-    double R; // K/W
+    // K/W
+    double R;
 };
+
+using EdgeParams = std::variant<ConductionUniform, ConvectionUniform, RadiationUniform, PureResistance>;
 
 class ThermalEdge {
     public:
@@ -45,7 +58,8 @@ class ThermalEdge {
     ThermalEdge(size_t id_a, size_t id_b, PureResistance p);
 
     double resistance() const;
-    std::variant<ConductionUniform, ConvectionUniform, RadiationUniform, PureResistance> params;
+    double resistance(double T_1, double T_2) const;
+    EdgeParams params;
 
     bool hasNode(size_t id);
 };

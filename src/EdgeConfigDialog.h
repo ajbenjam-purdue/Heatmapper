@@ -3,12 +3,17 @@
 #include <vector>
 #include <string>
 #include "MaterialLibrary.h"
+#include "ThermalEdge.h"
 
 class EdgeConfigDialog : public wxDialog {
 public:
     EdgeConfigDialog(wxWindow* parent, const MaterialLibrary& mat_lib);
+
+    // Legacy
     double GetCalculatedResistance() const { return m_calculated_res; }
 
+    // New
+    EdgeParams GetEdgeParameters() const { return m_returned_params; }
 private:
     const MaterialLibrary& m_mat_lib; // Store the reference
 
@@ -22,6 +27,7 @@ private:
     wxStaticText* m_warning_text; // Warnng text for deviations from correlation
     
     double m_calculated_res = 0.0;
+    EdgeParams m_returned_params;
 
     void OnTypeChange(wxCommandEvent& event);
     void OnMaterialChange(wxCommandEvent& event); // New event handler
@@ -32,6 +38,6 @@ private:
     void OnInputChanged(wxCommandEvent& event);
     wxTextCtrl* AddInputRow(const wxString& label, const std::string& key);
     double GetVal(const std::string& key);
-
+private:
     wxDECLARE_EVENT_TABLE();
 };

@@ -19,13 +19,17 @@ No dates. Things will come when they come.
 
 3. Transient analysis
 
-    - "Live" mode: click run and see how the circuit responds in real time. Need to do lots of learning for that.
+    - "Live" mode: click run and see how the circuit responds in real time. Need to do lots of learning for that. SCOPE EXPANDED: Radiation/Convection mandate potential iterative solutions, so need to create a solution wrapper that is context aware.
     - "Period" mode: runs analysis for (some amount of time). Outputs CSV for easier analysis.
+
+4. Developer ease of use
+
+    - Modularize the implementation of new resistance types, to boil down to essentially a list of inputs, assets (svg), and outputs.
 
 ### Fixes
 
-[ ] CRASH: After clearing a workspace, shift-clicking with the create node tool results in a segfault (TODO: CHECK ON THIS)
+[x] CRASH: After clearing a workspace, shift-clicking with the create node tool results in a segfault (TODO: CHECK ON THIS) Turned out it was an issue with MacOS cocoa's menu manager deleting the program instance when someone selected/deselected a ndoe twice quickly
 
 [x] NONFUNCTIONAL: Confirmation for clearance of workspace doesnt work (N>4)
 
-[ ] BUG: Edges not loading/saving correctly
+[x] BUG: Edges not loading/saving correctly

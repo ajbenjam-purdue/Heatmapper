@@ -33,6 +33,7 @@ EdgeConfigDialog::EdgeConfigDialog(wxWindow* parent, const MaterialLibrary& mat_
     choices.Add("Shape Factor: Sphere in Medium to Surface");
     choices.Add("Shape Factor: Two Parallel Cylinders in Medium");
     choices.Add("Shape Factor: Vertical Cylinder in Medium to Surface");
+    choices.Add("Radiation: Simple Surface Exchange");
     m_type_choice = new wxChoice(this, ID_TypeChoice, wxDefaultPosition, wxDefaultSize, choices);
     m_type_choice->SetSelection(0);
     main_sizer->Add(m_type_choice, 0, wxEXPAND | wxALL, 10);
@@ -160,7 +161,7 @@ void EdgeConfigDialog::BuildInputs(int selection) {
     wxString svg_path = resDir + sep + "assets" + sep + "resistances" + sep;
 
     // Add the Material Dropdown & custom Override
-    if (selection != 5)
+    if (selection != 5 && selection != 11)
     {
         wxBoxSizer* mat_row = new wxBoxSizer(wxHORIZONTAL);
         mat_row->Add(new wxStaticText(this, wxID_ANY, "Material:"), 1, wxALIGN_CENTER_VERTICAL);
@@ -238,9 +239,14 @@ void EdgeConfigDialog::BuildInputs(int selection) {
         AddInputRow("Length (L) [m]:", "L");
         AddInputRow("Cylinder Diameter (D) [m]:", "D");
     }
+    else if (selection == 11) { // Radiation!
+        // m_svg_display->SetBitmap(); // TODO: MAKE SVG FOR RADIATION SCENARIOS
+        AddInputRow("Surface Area (A) [m2]:", "A");
+        AddInputRow("Emissivity (ε) [0.0 - 1.0]:", "epsilon");
+    }
     
     // Only show for not CR
-    if (selection != 5)
+    if (selection != 5 && selection != 11)
     {
         wxBoxSizer* k_row = new wxBoxSizer(wxHORIZONTAL);
         k_row->Add(new wxStaticText(this, wxID_ANY, "Thermal Cond. (k) [W/mK]:"), 1, wxALIGN_CENTER_VERTICAL);
@@ -280,130 +286,99 @@ void EdgeConfigDialog::OnMaterialChange(wxCommandEvent& event) {
 
 void EdgeConfigDialog::OnOK(wxCommandEvent& event) {
     int sel = m_type_choice->GetSelection();
-    
-    // Read all strings from the dynamic inputs and convert to doubles
-    // std::vector<double> vals;
-    // for (auto* ctrl : m_inputs) {
-    //     double v = 0.0;
-    //     ctrl->GetValue().ToDouble(&v);
-    //     vals.push_back(v);
-    // }
-
-    // Just read directly with new helper
+    double calculated_R = 0.0;
 
     // Actual resistance calculation
     if (sel == 0) 
     {
         // Rectangular: R = L / (k * W * H)
-        double L = GetVal("L");
-        double W = GetVal("W");
-        double H = GetVal("H");
-        double k = GetVal("k");
-
-        m_calculated_res = L / std::max(k * W * H, 1e-10);
+        double L = GetVal("L"); double W = GetVal("W"); double H = GetVal("H"); double k = GetVal("k");
+        calculated_R = L / std::max(k * W * H, 1e-10);
     }
     else if (sel == 1)
     {
         // Circular: R = 4L / (k * pi * d^2)
-        double L = GetVal("L");
-        double D = GetVal("D");
-        double k = GetVal("k");
+        double L = GetVal("L"); double D = GetVal("D"); double k = GetVal("k");
 
-        m_calculated_res = 4.0 * L / std::max(k * M_PI * D * D, 1e-10);
+        calculated_R = 4.0 * L / std::max(k * M_PI * D * D, 1e-10);
     }
     else if (sel == 2)
     {
         // Annulus: R = 4L / (k * pi * (d2^2 - d1^2))
-        double L = GetVal("L");
-        double D1 = GetVal("D1");
-        double D2 = GetVal("D2");
-        double k = GetVal("k");
+        double L = GetVal("L"); double D1 = GetVal("D1"); double D2 = GetVal("D2"); double k = GetVal("k");
 
-        double D_outer = std::max(D1, D2);
-        double D_inner = std::min(D1, D2);
+        double D_outer = std::max(D1, D2); double D_inner = std::min(D1, D2);
 
-        m_calculated_res = 4.0 * L /
+        calculated_R = 4.0 * L /
             std::max(k * M_PI * (D_outer * D_outer - D_inner * D_inner), 1e-10);
     }
     else if (sel == 3)
     {
         // Radial (Cylinder): R = ln(d2/d1) / (2*pi*k*L)
-        double D1 = GetVal("D1");
-        double D2 = GetVal("D2");
-        double L = GetVal("L");
-        double k = GetVal("k");
+        double D1 = GetVal("D1"); double D2 = GetVal("D2"); double L = GetVal("L"); double k = GetVal("k");
 
-        double D_outer = std::max(D1, D2);
-        double D_inner = std::min(D1, D2);
+        double D_outer = std::max(D1, D2); double D_inner = std::min(D1, D2);
 
-        m_calculated_res = std::log(D_outer / D_inner) /
+        calculated_R = std::log(D_outer / D_inner) /
             std::max(2.0 * M_PI * k * L, 1e-10);
     }
     else if (sel == 4)
     {
         // Spherical: R = (1/d1 - 1/d2) / (2*pi*k)
-        double D1 = GetVal("D1");
-        double D2 = GetVal("D2");
-        double k = GetVal("k");
+        double D1 = GetVal("D1"); double D2 = GetVal("D2"); double k = GetVal("k");
 
-        double D_outer = std::max(D1, D2);
-        double D_inner = std::min(D1, D2);
+        double D_outer = std::max(D1, D2); double D_inner = std::min(D1, D2);
 
-        m_calculated_res =
+        calculated_R =
             (1.0 / D_inner - 1.0 / D_outer) /
             std::max(2.0 * M_PI * k, 1e-10);
     }
     else if (sel == 5)
     {
         // Contact Resistance: R = R'' / A
-        double Rpp = GetVal("Rpp");
-        double A = GetVal("A");
+        double Rpp = GetVal("Rpp"); double A = GetVal("A");
 
-        m_calculated_res = Rpp / std::max(A, 1e-10);
+        calculated_R = Rpp / std::max(A, 1e-10);
     }
     else if (sel == 6)
     {
         // Known Area: R = L / (k * A)
-        double L = GetVal("L");
-        double A = GetVal("A");
-        double k = GetVal("k");
+        double L = GetVal("L"); double A = GetVal("A"); double k = GetVal("k");
 
-        m_calculated_res = L / std::max(k * A, 1e-10);
+        calculated_R = L / std::max(k * A, 1e-10);
     }
     else if (sel == 7) 
     { // Cylinder in Medium to Surface: S = 2 pi L / ln(4z/D)
-        double D = GetVal("D");
-        double z = GetVal("z");
-        double L = GetVal("L");
-        double S = (2.0 * M_PI * L) / std::log(4.0 * z / D);
+        double D = GetVal("D"); double z = GetVal("z"); double L = GetVal("L"); double S = (2.0 * M_PI * L) / std::log(4.0 * z / D);
         
-        m_calculated_res = 1.0 / (S * GetVal("k"));
+        calculated_R = 1.0 / (S * GetVal("k"));
     }
     else if (sel == 8) 
     { // Sphere in Medium to Surface: S = 2 pi D / (1 - D/4z)
-        double D = GetVal("D");
-        double z = GetVal("z");
-        double S = (2.0 * M_PI * D) / (1 - D / (4.0 * z));
+        double D = GetVal("D"); double z = GetVal("z"); double S = (2.0 * M_PI * D) / (1 - D / (4.0 * z));
         
-        m_calculated_res = 1.0 / (S * GetVal("k"));
+        calculated_R = 1.0 / (S * GetVal("k"));
     }
     else if (sel == 9) 
     { // Two Cylinders in Medium: I'm not writing it twice
-        double L = GetVal("L");
-        double D1 = GetVal("D1");
-        double D2 = GetVal("D2");
-        double w = GetVal("w");
-        double S = 2.0 * M_PI * L / std::acosh((4.0 * w * w - D1 * D1 - D2 * D2) / (2.0 * D1 * D2));
+        double L = GetVal("L"); double D1 = GetVal("D1"); double D2 = GetVal("D2"); double w = GetVal("w"); double S = 2.0 * M_PI * L / std::acosh((4.0 * w * w - D1 * D1 - D2 * D2) / (2.0 * D1 * D2));
         
-        m_calculated_res = 1.0 / (S * GetVal("k"));
+        calculated_R = 1.0 / (S * GetVal("k"));
     }
     else if (sel == 10) 
     { // Vertical Cylinder in Medium to Surface: S = (2 pi L) / ln(4L/D)
-        double D = GetVal("D");
-        double L = GetVal("L");
-        double S = 2.0 * M_PI * L / std::log(4.0 * L / D);
+        double D = GetVal("D"); double L = GetVal("L"); double S = 2.0 * M_PI * L / std::log(4.0 * L / D);
         
-        m_calculated_res = 1.0 / (S * GetVal("k"));
+        calculated_R = 1.0 / (S * GetVal("k"));
+    }
+
+    if (sel <= 10) {
+        // Normal, linear heat transfer
+        m_returned_params = PureResistance{ calculated_R };
+    } 
+    else if (sel == 11) {
+        // Non-linear physics
+        m_returned_params = RadiationUniform{ GetVal("epsilon"), GetVal("A") };
     }
 
     event.Skip(); // Allow the dialog to close normally

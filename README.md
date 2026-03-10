@@ -1,5 +1,5 @@
 # Heatmapper
-### Version 0.1.7 | March 9, 2026
+### Version 0.1.8 | March 10, 2026
 Cross platform GUI Heatmapper tool
 
 ## What is this, who is it for?
@@ -36,3 +36,15 @@ Build application (MacOS/Win10):
 ```sh
 cmake --build build
 ```
+
+## Changelog
+
+### 0.1.8
+
+ - Implemented changes to the underlying ThermalNetwork and ThermalEdge classes to add non-linear solution possibilities. 
+ - Created a stand-in radiation resistance type as a POC, which still needs assets.
+
+### 0.1.7
+
+ - Added substantial feature: Node discretization, allowing a user to split a single node into a network representing real things. For example, one node may be split into a comb graph representing a jacketed pipe, with a discretized representation of both axial and radial flux. 
+ - Fixed a persistent MacOS crash with empty networks and corrected network saving/loading behavior.

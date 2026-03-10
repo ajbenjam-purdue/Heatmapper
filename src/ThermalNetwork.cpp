@@ -245,10 +245,12 @@ int ThermalNetwork::nodes_with_flux_fix()
 // Gets the flux across an edge
 double ThermalNetwork::get_edge_flux(size_t id) 
 {
-    ThermalNode& node_a = network_nodes[network_edges[id].id_0];
-    ThermalNode& node_b = network_nodes[network_edges[id].id_1];
-    double resistance = network_edges[id].resistance();
-    return (node_b.node_temperature - node_a.node_temperature) / resistance;
+    ThermalEdge& edge = network_edges[id];
+    double t1 = network_nodes[edge.id_0].node_temperature;
+    double t2 = network_nodes[edge.id_1].node_temperature;
+    
+    double resistance = network_edges[id].resistance(t1, t2);
+    return (t2 - t1) / resistance;
 }
 
 // True if a matching edge exists

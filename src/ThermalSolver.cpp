@@ -25,8 +25,12 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network)
         int idx_0 = id_to_index[edge.id_0];
         int idx_1 = id_to_index[edge.id_1];
         
-        // Calculate conductance
-        double cond = 1.0 / std::get<PureResistance>(edge.params).R;
+        // Grab the initial/current temperatures of the two connected nodes
+        double t1 = network.network_nodes[edge.id_0].node_temperature;
+        double t2 = network.network_nodes[edge.id_1].node_temperature;
+
+        // calculate conductance using the variant
+        double cond = 1.0 / edge.resistance(t1, t2);
 
         // Populate K using the translated indices
         K(idx_0, idx_0) += cond;

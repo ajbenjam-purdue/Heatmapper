@@ -354,8 +354,10 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
 
     // Grab the edge and populate the text boxes
     ThermalEdge& edge = m_active_network.network_edges[edge_index];
+    double t1 = m_active_network.network_nodes[edge.id_0].node_temperature;
+    double t2 = m_active_network.network_nodes[edge.id_1].node_temperature;
     
-    m_res_input->SetValue(wxString::Format("%.2f", edge.resistance()));
+    m_res_input->SetValue(wxString::Format("%.4f", edge.resistance(t1, t2)));
     m_flow_disp->SetValue(wxString::Format("%.2f", std::abs(m_active_network.get_edge_flux(edge_index))));
 
     this->Layout();
@@ -526,13 +528,18 @@ void MainFrame::OnEdgeConfigButtonClicked(wxCommandEvent& event)
     // ShowModal() pauses the app
     if (dialog.ShowModal() == wxID_OK)
     { // Update if OK was hit
-        double new_r = dialog.GetCalculatedResistance();
+        double new_r = dialog.GetCalculatedResistance(); // NOT USED
+
+        // Assign edge params to edge
+        m_active_network.network_edges[m_currently_editing_edge].params = dialog.GetEdgeParameters(); 
         
-        // Update UI text box so the user sees the new number and apply to the node
-        m_res_input->SetValue(wxString::Format("%.4f", new_r));
+        // To update the UI Preview box edge needs to calculate its own value
+        ThermalEdge& edge = m_active_network.network_edges[m_currently_editing_edge];
+        double t1 = m_active_network.network_nodes[edge.id_0].node_temperature;
+        double t2 = m_active_network.network_nodes[edge.id_1].node_temperature;
+
+        m_res_input->SetValue(wxString::Format("%.4f", edge.resistance(t1, t2)));
         
-        // Unsure of how to tackle radiative resistances atm
-        m_active_network.network_edges[m_currently_editing_edge].params = PureResistance{new_r};
         m_canvas->Refresh();
     }
 }

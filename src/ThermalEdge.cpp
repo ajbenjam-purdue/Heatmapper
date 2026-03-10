@@ -42,8 +42,23 @@ ThermalEdge::ThermalEdge(size_t id_a, size_t id_b, PureResistance p)
         type(EdgeType::RESISTANCE_PURE),
         params(p) {}
 
+// Legacy function, since who knows where all the calls are
 double ThermalEdge::resistance() const {
     return std::visit([](auto&& p) -> double {
+        using T = std::decay_t<decltype(p)>;
+
+        if constexpr (std::is_same_v<T, PureResistance>) {
+            return p.R;
+        }
+        else {
+            return 1e10;
+        }
+    }, params);
+}
+
+// New function
+double ThermalEdge::resistance(double T1, double T2) const {
+    return std::visit([T1, T2](auto&& p) -> double {
         using T = std::decay_t<decltype(p)>;
 
         if constexpr (std::is_same_v<T, ConductionUniform>) {
@@ -53,13 +68,25 @@ double ThermalEdge::resistance() const {
             return 1.0 / (p.h * p.area);
         }
         else if constexpr (std::is_same_v<T, RadiationUniform>) {
-            return 1.0 / (p.h * p.area);
+            // Celsius to Kelvin (Radiation only)
+            double t1_k = T1 + 273.15;
+            double t2_k = T2 + 273.15;
+            
+            // Prevent div-by-zero for un-inst temperature nodes
+            if (std::abs(t1_k - t2_k) < 1e-6) t1_k += 1e-6; 
+
+            // Linearization
+            const double sigma = 5.670374419e-8;
+            double hr = p.epsilon * sigma * (t1_k + t2_k) * (t1_k * t1_k + t2_k * t2_k);
+            
+            // Eff. resistance is just 1/(h_r*A)
+            return 1.0 / std::max(hr * p.area, 1e-10);
         }
         else if constexpr (std::is_same_v<T, PureResistance>) {
-            return p.R;
+            return p.R; // Ignores T1 and T2 entirely
         }
         else {
-            return 0.0;
+            return 1e10; // Fallback
         }
     }, params);
 }
