@@ -151,32 +151,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     // Hand the network to the canvas
     m_canvas->SetNetwork(&m_active_network);
 
-    wxMenu *menuFile = new wxMenu;
-    menuFile->Append(wxID_OPEN, "&Load from .json\tCtrl-O", "Open a thermal network JSON file");
-    menuFile->Append(wxID_SAVEAS, "Save &As .json\tCtrl-Shift-S", "Save the thermal network to JSON");
-    menuFile->AppendSeparator();
-    menuFile->Append(wxID_CLEAR, "&Reset workspace\tCtrl-Shift-C", "Reset the current workspace");
-    menuFile->Append(wxID_EXIT);
-
-    wxMenu *menuRun = new wxMenu;
-    menuRun->Append(ID_RunSteadyState, "&Run Static Analysis\tCtrl-R", "Run the steady-state configuration");
-    menuRun->Append(ID_RunTransient, "&Run Transient Analysis\tCtrl-Alt-R", "Perform transient analysis on the current configuration");
-
-    // Create the contextual menus (But don't append them to the bar yet)
-    m_node_menu = new wxMenu;
-    m_node_menu->Append(ID_OpenDiscretizer, "Discretize Node\tCtrl-D", "Replace single node with a multi-node representation of an object");
-
-    m_edge_menu = new wxMenu;
-    m_edge_menu->Append(wxID_ANY, "Set Perfect Conductor", "Drop thermal resistance to zero");
-
-    // Add it to the Menu Bar and attach it to the Frame
-    wxMenuBar *menuBar = new wxMenuBar;
-    menuBar->Append(menuFile, "&File");
-    menuBar->Append(menuRun, "&Run");
-    SetMenuBar(menuBar);
-
-    // Toolbar
-
     // Get asset paths
     wxString resDir = wxStandardPaths::Get().GetResourcesDir();
 
@@ -189,6 +163,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     toolBar->Realize(); 
     
     UpdateToolbarIcons(); // Paint the correct SVGs
+    UpdateDynamicMenus(); // Build the correct menu
 }
 
 void MainFrame::OnClear(wxCommandEvent& event) {
@@ -206,6 +181,12 @@ void MainFrame::OnClear(wxCommandEvent& event) {
 
     // Clear network
     m_active_network.network_clear();
+    m_canvas->m_sel_node_ids.clear();
+    m_canvas->m_sel_edge_index = -1;
+    
+    // Clear the UI
+    ResetPropertiesWindow();
+    
     Refresh();
 }
 
@@ -323,6 +304,12 @@ void MainFrame::ShowNodeProperties(int node_id) {
     m_flow_disp->Hide();
     m_flow_disp_label->Hide();
     m_edge_config_button->Hide();
+
+    // Check for real nodes present
+    if (m_active_network.network_nodes.count(node_id) == 0) {
+        ResetPropertiesWindow(); // Safety fallback if node doesn't exist
+        return; 
+    }
 
     // Grab the node and populate the text boxes
     ThermalNode& node = m_active_network.network_nodes[node_id];
@@ -494,48 +481,40 @@ void MainFrame::OnCharHook(wxKeyEvent& event) {
 }
 
 void MainFrame::UpdateDynamicMenus() {
-    wxMenuBar* bar = GetMenuBar();
-    if (!bar) return;
+    // Create a brand new Menu Bar
+    wxMenuBar* new_bar = new wxMenuBar;
 
-    // Are nodes selected? (Either a single node or a multi-selection)
+    // Build the permanent menus (File & Run)
+    wxMenu* menuFile = new wxMenu;
+    menuFile->Append(wxID_OPEN, "&Load from .json\tCtrl-O", "Open a thermal network JSON file");
+    menuFile->Append(wxID_SAVEAS, "Save &As .json\tCtrl-Shift-S", "Save the thermal network to JSON");
+    menuFile->AppendSeparator();
+    menuFile->Append(wxID_CLEAR, "&Reset workspace\tCtrl-Shift-C", "Reset the current workspace");
+    menuFile->Append(wxID_EXIT);
+
+    wxMenu* menuRun = new wxMenu;
+    menuRun->Append(ID_RunSteadyState, "&Run Static Analysis\tCtrl-R", "Run the steady-state configuration");
+    menuRun->Append(ID_RunTransient, "&Run Transient Analysis\tCtrl-Alt-R", "Perform transient analysis");
+
+    new_bar->Append(menuFile, "&File");
+    new_bar->Append(menuRun, "&Run");
+
+    // Conditionally build and attach the Node/Edge menu
     bool has_nodes = (m_currently_editing_node != -1) || (m_currently_editing_node == -2);
-    
-    // Are edges selected?
     bool has_edges = (m_currently_editing_edge != -1);
-
-    if (has_nodes && !m_is_node_menu_attached) {
-        bar->Append(m_node_menu, "&Node");
-        m_is_node_menu_attached = true;
-    } 
-    else if (!has_nodes && m_is_node_menu_attached) {
-        int pos = bar->FindMenu("&Node");
-        if (pos != wxNOT_FOUND) {
-            bar->Remove(pos); // Removes from the UI, but m_node_menu keeps it safe in memory
-            m_is_node_menu_attached = false;
-        }
+    if (has_nodes) {
+        wxMenu* nodeMenu = new wxMenu;
+        nodeMenu->Append(ID_OpenDiscretizer, "Discretize Node\tCtrl-D", "Replace single node with a multi-node representation");
+        new_bar->Append(nodeMenu, "&Node");
+    }
+    else if (has_edges) {
+        wxMenu* edgeMenu = new wxMenu;
+        edgeMenu->Append(wxID_ANY, "Set Perfect Conductor", "Drop thermal resistance to zero");
+        new_bar->Append(edgeMenu, "&Edge");
     }
 
-    if (has_edges && !m_is_edge_menu_attached) {
-        bar->Append(m_edge_menu, "&Edge");
-        m_is_edge_menu_attached = true;
-    } 
-    else if (!has_edges && m_is_edge_menu_attached) {
-        int pos = bar->FindMenu("&Edge");
-        if (pos != wxNOT_FOUND) {
-            bar->Remove(pos);
-            m_is_edge_menu_attached = false;
-        }
-    }
-}
-
-MainFrame::~MainFrame() {
-    // If the menus are currently hidden, wxWidgets doesn't own them, so they must be deleted manually
-    if (!m_is_node_menu_attached && m_node_menu) {
-        delete m_node_menu;
-    }
-    if (!m_is_edge_menu_attached && m_edge_menu) {
-        delete m_edge_menu;
-    }
+    // Swap the entire bar to avoid destructor inference
+    SetMenuBar(new_bar);
 }
 
 void MainFrame::OnEdgeConfigButtonClicked(wxCommandEvent& event)
@@ -569,7 +548,10 @@ void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event) {
         int type = dialog.GetDiscretizationType();
         int N = std::max(1, dialog.GetN());
         int M = std::max(1, dialog.GetM());
-        double R = std::max(dialog.GetInternalResistance(), 1e-8);
+        
+        // Grab the advanced resistances!
+        double R1 = std::max(dialog.GetR1(), 1e-8);
+        double R2 = std::max(dialog.GetR2(), 1e-8);
 
         // Capture the original node properties
         ThermalNode old_node = m_active_network.network_nodes[m_currently_editing_node];
@@ -600,7 +582,7 @@ void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event) {
             }
             // Wire together
             for (int i = 0; i < N - 1; ++i) {
-                m_active_network.add_edge(ThermalEdge(new_ids[i], new_ids[i+1], PureResistance{R}));
+                m_active_network.add_edge(ThermalEdge(new_ids[i], new_ids[i+1], PureResistance{R1})); // Use R1
             }
         }
         else if (type == 1) { 
@@ -624,7 +606,7 @@ void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event) {
                 
                 int spoke_id = m_active_network.add_node(spoke);
                 new_ids.push_back(spoke_id);
-                m_active_network.add_edge(ThermalEdge(center_id, spoke_id, PureResistance{R}));
+                m_active_network.add_edge(ThermalEdge(center_id, spoke_id, PureResistance{R1})); // Use R1
             }
         }
         else if (type == 2) { 
@@ -641,10 +623,11 @@ void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event) {
                     int id = m_active_network.add_node(nn);
                     new_ids.push_back(id);
 
-                    // Wire vertical teeth
-                    if (j > 0) m_active_network.add_edge(ThermalEdge(new_ids.back() - 1, new_ids.back(), PureResistance{R}));
-                    // Wire the horizontal spine (only at j==0)
-                    if (j == 0 && i > 0) m_active_network.add_edge(ThermalEdge(new_ids[new_ids.size() - 1 - M], new_ids.back(), PureResistance{R}));
+                    // Wire vertical teeth (Use R2!)
+                    if (j > 0) m_active_network.add_edge(ThermalEdge(new_ids.back() - 1, new_ids.back(), PureResistance{R2}));
+                    
+                    // Wire the horizontal spine (Use R1!)
+                    if (j == 0 && i > 0) m_active_network.add_edge(ThermalEdge(new_ids[new_ids.size() - 1 - M], new_ids.back(), PureResistance{R1}));
                 }
             }
         }

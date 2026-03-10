@@ -368,7 +368,7 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
             ((MainFrame *)GetParent())->ForceSelectTool(); // Override selection
             m_sel_node_ids.clear();
             m_sel_node_ids.insert(new_node_id);
-            ((MainFrame *)GetParent())->ShowNodeProperties(new_node.node_id);
+            ((MainFrame *)GetParent())->ShowNodeProperties(new_node_id);
         }
         break;
     }

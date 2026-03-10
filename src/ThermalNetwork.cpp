@@ -280,6 +280,7 @@ void ThermalNetwork::network_clear()
 {
     network_edges_clear();
     network_nodes_clear();
+    next_node_id = 0;
     network_label = "Unnamed network";
 }
 

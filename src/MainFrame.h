@@ -10,7 +10,6 @@ class ThermalCanvas; // Fwd declaration
 class MainFrame : public wxFrame {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-    ~MainFrame(); // destructor method
     
     MaterialLibrary m_materials;
 
@@ -59,11 +58,6 @@ private:
     void OnCharHook(wxKeyEvent& event);
     void OnEdgeConfigButtonClicked(wxCommandEvent& event);
     void OnDiscretizeButtonClicked(wxCommandEvent& event);
-    
-    wxMenu* m_node_menu = nullptr;
-    wxMenu* m_edge_menu = nullptr;
-    bool m_is_node_menu_attached = false;
-    bool m_is_edge_menu_attached = false;
 
     wxDECLARE_EVENT_TABLE();
 };
