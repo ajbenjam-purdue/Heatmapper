@@ -39,6 +39,13 @@ class MaterialLibrary
 public:
     std::vector<Material> materials;
 
+    // Pushes a new material into a library and returns its index in the vector
+    size_t push_material(Material new_material)
+    {
+        materials.push_back(new_material);
+        return materials.size() - 1;
+    }
+
     void load_json(const std::string& path)
     {
         materials.clear(); // Wipe existing materials to prevent duplicates on reload
