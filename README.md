@@ -48,3 +48,6 @@ cmake --build build
 
  - Added substantial feature: Node discretization, allowing a user to split a single node into a network representing real things. For example, one node may be split into a comb graph representing a jacketed pipe, with a discretized representation of both axial and radial flux. 
  - Fixed a persistent MacOS crash with empty networks and corrected network saving/loading behavior.
+
+### 0.1.6 and Earlier
+ - Check commit history
