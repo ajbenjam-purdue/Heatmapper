@@ -43,6 +43,7 @@ cmake --build build
 
  - Implemented changes to the underlying ThermalNetwork and ThermalEdge classes to add non-linear solution possibilities. 
  - Created a stand-in radiation resistance type as a POC, which still needs assets.
+ - Fully reworked backend of ThermalEdge EdgeConfig dialog to enable easier development of new configurations.
 
 ### 0.1.7
 

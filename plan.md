@@ -33,3 +33,5 @@ No dates. Things will come when they come.
 [x] NONFUNCTIONAL: Confirmation for clearance of workspace doesnt work (N>4)
 
 [x] BUG: Edges not loading/saving correctly
+
+[ ] BUG: IMMEDIATE crash after spawning a node into an empty workspace
