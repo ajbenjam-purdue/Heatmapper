@@ -1,13 +1,4 @@
 #include "MainFrame.h"
-#include "ThermalCanvas.h"
-#include "ThermalSolver.h"
-#include "EdgeConfigDialog.h"
-#include "DiscretizeDialog.h"
-#include <fstream>
-#include <wx/bmpbndl.h>
-#include <wx/filename.h>
-#include <wx/stdpaths.h> // Icons
-#include "json.hpp"
 
 #if defined(__WXMSW__)
 #pragma comment(linker, "\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -16,14 +7,15 @@
 // Map the events
 enum {
     ID_RunSteadyState = wxID_HIGHEST + 1,
-    ID_RunTransient = wxID_HIGHEST + 2,
-    ID_ApplyProperties = wxID_HIGHEST + 3,
-    ID_ToolSelect = wxID_HIGHEST + 4,
-    ID_ToolNode = wxID_HIGHEST + 5,
-    ID_ToolEdge = wxID_HIGHEST + 6,
-    ID_ToolDelete = wxID_HIGHEST + 7,
-    ID_OpenEdgeConfig = wxID_HIGHEST + 8,
-    ID_OpenDiscretizer = wxID_HIGHEST + 9
+    ID_RunTransient,
+    ID_ApplyProperties,
+    ID_ToolSelect,
+    ID_ToolNode,
+    ID_ToolEdge,
+    ID_ToolDelete,
+    ID_OpenEdgeConfig,
+    ID_OpenDiscretizer,
+    ID_OpenMaterialLib,
 };
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -36,6 +28,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
     EVT_BUTTON(ID_OpenEdgeConfig, MainFrame::OnEdgeConfigButtonClicked)
     EVT_MENU(ID_OpenDiscretizer, MainFrame::OnDiscretizeButtonClicked)
+    EVT_MENU(ID_OpenMaterialLib, MainFrame::OnMaterialLibOpened)
     EVT_TOOL(ID_ToolSelect, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolNode, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolEdge, MainFrame::OnToolSelect)
@@ -492,6 +485,7 @@ void MainFrame::UpdateDynamicMenus() {
     menuFile->Append(wxID_SAVEAS, "Save &As .json\tCtrl-Shift-S", "Save the thermal network to JSON");
     menuFile->AppendSeparator();
     menuFile->Append(wxID_CLEAR, "&Reset workspace\tCtrl-Shift-C", "Reset the current workspace");
+    menuFile->Append(ID_OpenMaterialLib, "Open Materials Library\tCrtl-Shift-M", "Open the Materials Library to Add, Edit, or Remove entries");
     menuFile->Append(wxID_EXIT);
 
     wxMenu* menuRun = new wxMenu;
@@ -649,5 +643,16 @@ void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event) {
         }
 
         m_canvas->Refresh();
+    }
+}
+
+void MainFrame::OnMaterialLibOpened(wxCommandEvent& event)
+{
+    MaterialDialog dialog(this, m_materials);
+    if (dialog.ShowModal() == wxID_OK) {
+        m_materials = dialog.GetModifiedLibrary();
+        
+        // Construct your safe AppData path again
+        m_materials.save_json(matFilePath.ToStdString(wxConvUTF8)); 
     }
 }

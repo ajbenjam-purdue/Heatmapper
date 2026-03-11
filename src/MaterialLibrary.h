@@ -46,6 +46,13 @@ public:
         return materials.size() - 1;
     }
 
+    // Inserts a material at the specified index
+    void insert_material(Material new_material, int index)
+    {
+        if (index >= 0 && index <= materials.size())
+            materials.insert(materials.begin()+index, new_material);
+    }
+
     void load_json(const std::string& path)
     {
         materials.clear(); // Wipe existing materials to prevent duplicates on reload
