@@ -248,7 +248,7 @@ inline std::vector<ConfigType> ConfigTypes = {
     },
     ConfigType{ // Radiation to Surroundings
         "Radiation: Surface to Large Surroundings",  
-        CONDUCTION, "", 
+        CONDUCTION, "radiation_surroundings.svg", 
         [](const std::unordered_map<std::string, wxTextCtrl*> &inputs){return "";}, // Always valid
         [](const std::unordered_map<std::string, wxTextCtrl*> &inputs){
             return RadiationUniform{ EdgeCFG::GetVal(inputs, "epsilon"), EdgeCFG::GetVal(inputs, "A") };

@@ -4,7 +4,7 @@ Cross platform GUI Heatmapper tool
 
 ## What is this, who is it for?
 
-Heatmapper is a general utility I would've found useful a few years ago in my undergrad heat & mass transfer courses. It applies a network and edge approach, often referred to as a resistor network, to solve complex thermal circuits. While students analytically solve for fluxes, resistances, or temperatures, Heatmapper uses [Eigen](https://libeigen.gitlab.io) 3.5 (5.0.0) to quickly numerically solve for the same variables. Saving to human-readable files is done using [nlohmann's json header-only library](https://github.com/nlohmann/json), and materials information is sourced primarily from [ASM](asm.matweb.com). 
+Heatmapper is a general utility I would've found useful a few years ago in my undergrad heat & mass transfer courses. It applies a network and edge approach, often referred to as a resistor network, to solve complex thermal circuits. While students analytically solve for fluxes, resistances, or temperatures, Heatmapper uses [Eigen](https://libeigen.gitlab.io) 3.5 (5.0.0) to quickly numerically solve for the same variables. Saving to human-readable files is done using [nlohmann's json header-only library](https://github.com/nlohmann/json), and materials information is sourced primarily from [ASM](asm.matweb.com), or my reference textbook, _Fundamentals of Heat And Mass Transfer_ (Bergman et. al). 
 
 Since I use both a desktop and an M2 Macbook, it needed to be portable and cross-platform. It should run on any Apple Silicon Mac or any modern x64 Windows version, but I've only tested on my own M2 Macbook Pro and x64 Win10 PC. This is more of a proof-of-concept than anything, and is my first real C++ project and deviation from Python.
 
@@ -25,7 +25,7 @@ A primitive materials library is being built up with the application and is mana
 
 ## Building the application
 
-This application is build with Wx. In order to locally build the application you must have the Wx library build on your machine.
+This application is built with Wx. In order to locally build the application you must have the Wx library build on your machine. Additionally, you will need to change the paths in `CMakeLists.txt` to local instances of jlohmann/json and Eigen. Any modern version of these libraries should work, and neither has to be built for your specific system (unlike Wx).
 
 Create build dir (MacOS):
 ```sh

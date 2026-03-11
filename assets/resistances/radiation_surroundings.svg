@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<svg version="1.2" baseProfile="tiny" width="40.91mm" height="34.82mm" viewBox="3810 2260 4091 3482" preserveAspectRatio="xMidYMid" fill-rule="evenodd" stroke-width="28.222" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
+ <g visibility="visible" id="Slide_1">
+  <g>
+   <path fill="rgb(204,0,0)" fill-opacity="0.502" stroke="rgb(255,255,255)" stroke-opacity="0.502" d="M 4684,5715 L 6621,5715 6731,4445 5969,4445 5588,3683 4191,3683 4684,5715 Z"/>
+   <path fill="none" stroke="rgb(255,255,255)" id="Drawing_1_0" stroke-width="53" stroke-linejoin="round" d="M 4684,5715 L 6621,5715 6731,4445 5969,4445 5588,3683 4191,3683 4684,5715 Z"/>
+  </g>
+  <g>
+   <path fill="rgb(255,255,255)" stroke="none" d="M 4022,5015 C 3994,5091 3965,5168 3937,5245 3994,5245 4051,5245 4107,5245 4079,5168 4050,5091 4022,5015 Z M 3987,4953 C 4010,4953 4034,4953 4058,4953 4116,5107 4175,5262 4234,5416 4212,5416 4191,5416 4169,5416 4155,5376 4141,5337 4127,5297 4057,5297 3988,5297 3918,5297 3904,5337 3890,5376 3876,5416 3854,5416 3832,5416 3810,5416 3869,5262 3928,5107 3987,4953 Z"/>
+   <rect fill="none" stroke="none" x="3810" y="4953" width="425" height="464"/>
+  </g>
+  <g>
+   <path fill="none" stroke="rgb(153,0,0)" id="Drawing_3_0" stroke-width="53" stroke-linejoin="round" d="M 7874,2667 L 7874,2286 5080,2286"/>
+  </g>
+ </g>
+</svg>
