@@ -95,7 +95,7 @@ public:
         }
     }
 
-    // Extracted into its own public method so the UI can trigger a save!
+    // Extracted into its own public method so the UI may trigger a save
     void save_json(const std::string& path)
     {
         json Doc;
@@ -113,6 +113,11 @@ public:
         if (file.is_open()) {
             file << Doc.dump(4);
             file.close();
+        }
+        else
+        {
+            // Low quality pop-up
+            wxMessageBox(wxString::Format("Could not save to path '%s'", path));
         }
     }
 

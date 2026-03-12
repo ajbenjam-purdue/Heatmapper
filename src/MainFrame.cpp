@@ -72,7 +72,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     }
 
     // Construct the absolute path to materials.json
-    wxString matFilePath = userDataDir + sep + "materials.json";
+    matFilePath = userDataDir + sep + "materials.json";
 
     // Load it
     m_materials.load_json(matFilePath.ToStdString());
@@ -650,9 +650,10 @@ void MainFrame::OnMaterialLibOpened(wxCommandEvent& event)
 {
     MaterialDialog dialog(this, m_materials);
     if (dialog.ShowModal() == wxID_OK) {
+        // Get new library and set to current
         m_materials = dialog.GetModifiedLibrary();
         
-        // Construct your safe AppData path again
-        m_materials.save_json(matFilePath.ToStdString(wxConvUTF8)); 
+        // Save to the existing path already used to load
+        m_materials.save_json(matFilePath.ToStdString()); 
     }
 }

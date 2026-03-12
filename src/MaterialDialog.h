@@ -9,7 +9,8 @@ enum {
     ID_AddMaterial,
     ID_DeleteMaterial,
     ID_PropertyEdited,
-    ID_DuplicateMaterial
+    ID_DuplicateMaterial,
+    ID_LoadMaterialsFromJson
 };
 
 class MaterialDialog : public wxDialog {
@@ -45,6 +46,8 @@ private:
     void OnDeleteMaterial(wxCommandEvent& event);
     // Edited a property
     void OnPropertyEdited(wxCommandEvent& event);
+    // Imported a file
+    void loadFromJson(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };
