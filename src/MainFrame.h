@@ -2,8 +2,18 @@
 #include <wx/wx.h>
 #include <wx/artprov.h>
 #include <format>
+#include <fstream>
+#include <wx/bmpbndl.h>
+#include <wx/filename.h>
+#include <wx/stdpaths.h>
 #include "ThermalNetwork.h"
 #include "MaterialLibrary.h"
+#include "MaterialDialog.h"
+#include "ThermalCanvas.h"
+#include "ThermalSolver.h"
+#include "EdgeConfigDialog.h"
+#include "DiscretizeDialog.h"
+#include "json.hpp"
 
 class ThermalCanvas; // Fwd declaration
 
@@ -41,6 +51,9 @@ private:
     wxStaticText* m_load_label;
     wxStaticText* m_thermal_res_label;
 
+    // Path
+    wxString matFilePath;
+
     int m_currently_editing_node = -1;
     int m_currently_editing_edge = -1;
 
@@ -58,6 +71,7 @@ private:
     void OnCharHook(wxKeyEvent& event);
     void OnEdgeConfigButtonClicked(wxCommandEvent& event);
     void OnDiscretizeButtonClicked(wxCommandEvent& event);
+    void OnMaterialLibOpened(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };

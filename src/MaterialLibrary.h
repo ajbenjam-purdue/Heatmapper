@@ -39,6 +39,20 @@ class MaterialLibrary
 public:
     std::vector<Material> materials;
 
+    // Pushes a new material into a library and returns its index in the vector
+    size_t push_material(Material new_material)
+    {
+        materials.push_back(new_material);
+        return materials.size() - 1;
+    }
+
+    // Inserts a material at the specified index
+    void insert_material(Material new_material, int index)
+    {
+        if (index >= 0 && index <= materials.size())
+            materials.insert(materials.begin()+index, new_material);
+    }
+
     void load_json(const std::string& path)
     {
         materials.clear(); // Wipe existing materials to prevent duplicates on reload
@@ -81,7 +95,7 @@ public:
         }
     }
 
-    // Extracted into its own public method so the UI can trigger a save!
+    // Extracted into its own public method so the UI may trigger a save
     void save_json(const std::string& path)
     {
         json Doc;
@@ -99,6 +113,11 @@ public:
         if (file.is_open()) {
             file << Doc.dump(4);
             file.close();
+        }
+        else
+        {
+            // Low quality pop-up
+            wxMessageBox(wxString::Format("Could not save to path '%s'", path));
         }
     }
 
