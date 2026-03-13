@@ -38,15 +38,38 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     // Draw snapping guides
     gc->SetPen(wxPen(COLOR_GUIDE, 1));
 
-    if (SNAP_X != -1.0)
+    if (SNAP_DX != 0) 
     {
+        // Diagonal drawing
         double guideline_x = SNAP_X * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-        gc->StrokeLine(guideline_x, 0, guideline_x, height);
-    }
-    if (SNAP_Y != -1.0)
-    {
         double guideline_y = SNAP_Y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-        gc->StrokeLine(0, guideline_y, width, guideline_y);
+
+        if (SNAP_DX > 0) 
+        {
+            // Down and Right
+            auto [x_1, y_1, x_2, y_2] = extended_line(guideline_x, guideline_y, guideline_x + 10, guideline_y + 10, width, height);
+            gc->StrokeLine(x_1, y_1, x_2, y_2);
+        } 
+        else 
+        {
+            // Up and Right
+            auto [x_1, y_1, x_2, y_2] = extended_line(guideline_x, guideline_y, guideline_x + 10, guideline_y - 10, width, height);
+            gc->StrokeLine(x_1, y_1, x_2, y_2);
+        }
+    } 
+    else 
+    {
+        // Orthogonal drawing
+        if (SNAP_X != -1.0)
+        {
+            double guideline_x = SNAP_X * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+            gc->StrokeLine(guideline_x, 0, guideline_x, height);
+        }
+        if (SNAP_Y != -1.0)
+        {
+            double guideline_y = SNAP_Y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+            gc->StrokeLine(0, guideline_y, width, guideline_y);
+        }
     }
 
     // Draw edges, then nodes
@@ -446,46 +469,38 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
             }
         }
 
+        // Node was identified, delete
         if (clicked_node_id != -1)
         {
-            m_network->network_nodes.erase(clicked_node_id); // Delete node
+            m_sel_node_ids.clear();
+            m_sel_edge_index = -1;
+            m_sel_node_ids.insert(clicked_node_id);
 
-            // Clear out all associated edges (Thank you Gemini for the concise code. Beats my implementation)
-            m_network->network_edges.erase(
-                std::remove_if(m_network->network_edges.begin(), m_network->network_edges.end(),
-                               [clicked_node_id](const ThermalEdge &e)
-                               {
-                                   return e.id_0 == clicked_node_id || e.id_1 == clicked_node_id;
-                               }),
-                m_network->network_edges.end());
-
-            // Clear UI if the deleted node was selected
-            if (m_sel_node_ids.count(clicked_node_id) == 1)
-            {
-                m_sel_node_ids.erase(clicked_node_id);
-                ((MainFrame *)GetParent())->ShowNodeProperties(-1);
-            }
-            break; // No need to check edges
+            DeleteSelectedItems();
         }
-
-        // Now check for edges
-        for (size_t i = 0; i < m_network->network_edges.size(); i++)
+        else // No node, check for edges
         {
-            const ThermalEdge &edge = m_network->network_edges[i];
-
-            // Convert everything to screen px
-            double edge_x_1 = m_network->network_nodes[edge.id_0].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-            double edge_y_1 = m_network->network_nodes[edge.id_0].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-            double edge_x_2 = m_network->network_nodes[edge.id_1].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-            double edge_y_2 = m_network->network_nodes[edge.id_1].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
-
-            // Check first if bounding box criteria is met
-            if (in_bounding_box(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) && distance_perpendicular(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) <= EDGE_SELECTION_TOLERANCE)
+            for (size_t i = 0; i < m_network->network_edges.size(); i++)
             {
-                // Vaporize edge and exit loop
-                m_network->network_edges.erase(m_network->network_edges.begin() + i);
+                const ThermalEdge &edge = m_network->network_edges[i];
 
-                break;
+                // Convert everything to screen px
+                double edge_x_1 = m_network->network_nodes[edge.id_0].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+                double edge_y_1 = m_network->network_nodes[edge.id_0].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+                double edge_x_2 = m_network->network_nodes[edge.id_1].canvas_position_x * (width - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+                double edge_y_2 = m_network->network_nodes[edge.id_1].canvas_position_y * (height - CANVAS_MARGIN * 2) + CANVAS_MARGIN;
+
+                // Check first if bounding box criteria is met
+                if (in_bounding_box(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) && distance_perpendicular(mouse_pos.x, mouse_pos.y, edge_x_1, edge_y_1, edge_x_2, edge_y_2) <= EDGE_SELECTION_TOLERANCE)
+                {
+                    // Atomize edge and exit loop
+                    m_sel_edge_index = i;
+                    m_sel_node_ids.clear();
+
+                    DeleteSelectedItems();
+
+                    break;
+                }
             }
         }
 
@@ -533,6 +548,7 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
 
         SNAP_X = -1;
         SNAP_Y = -1;
+        SNAP_DX = 0;
 
         // Snapping (Only snap if dragging a single node to avoid catastrophe)
         if (m_sel_node_ids.size() == 1)
@@ -562,27 +578,39 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
                 double theoretical_y_px = theoretical_y * (height - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
                 double node_x_px = node.canvas_position_x * (width - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
                 double node_y_px = node.canvas_position_y * (height - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
-                if (SNAP_X == -1 && SNAP_Y == -1 && distance_cartesian(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px) > 24) // Check for diagonal (only if >40px away)
+                if (SNAP_X == -1 && SNAP_Y == -1 && distance_cartesian(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px) >= DISTANCE_NO_SNAP) // Check for diagonal (only if >40px away)
                 {
-                    if (distance_perpendicular(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px + 10) <= 2 * SNAP_MARGIN) // Top-left/Bottom-right axis
+                    // Check Down-Right Diagonal (y + 10)
+                    if (distance_perpendicular(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px + 10) <= 2 * SNAP_MARGIN)
                     {
-                        auto [SNAP_X, SNAP_Y] = enforce_diagonal(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px + 10);
-                        // Move snap back to relative
-                        SNAP_X = (SNAP_X) / (width - 2 * CANVAS_MARGIN);
-                        SNAP_Y = (SNAP_Y) / (height - 2 * CANVAS_MARGIN);
+                        auto [snap_px_x, snap_px_y] = enforce_diagonal(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px + 10);
                         
-                        total_dx = SNAP_X - start_x;
-                        total_dy = SNAP_Y - start_y;
+                        // Visual anchors to tgt node
+                        SNAP_X = node.canvas_position_x;
+                        SNAP_Y = node.canvas_position_y;
+                        SNAP_DX = 1; // Down-right
+                        
+                        // Physical anchors
+                        double rel_x = (snap_px_x - CANVAS_MARGIN) / (width - 2 * CANVAS_MARGIN);
+                        double rel_y = (snap_px_y - CANVAS_MARGIN) / (height - 2 * CANVAS_MARGIN);
+                        total_dx = rel_x - start_x;
+                        total_dy = rel_y - start_y;
                     }
-                    else if (distance_perpendicular(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px - 10) <= 2 * SNAP_MARGIN) // Top-left/Bottom-right axis
+                    // Check Up-Right Diagonal (y - 10)
+                    else if (distance_perpendicular(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px - 10) <= 2 * SNAP_MARGIN)
                     {
-                        auto [SNAP_X, SNAP_Y] = enforce_diagonal(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px - 10);
-                        // Move snap back to relative
-                        SNAP_X = (SNAP_X) / (width - 2 * CANVAS_MARGIN);
-                        SNAP_Y = (SNAP_Y) / (height - 2 * CANVAS_MARGIN); //  - SNAP_MARGIN
+                        auto [snap_px_x, snap_px_y] = enforce_diagonal(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px - 10);
                         
-                        total_dx = SNAP_X - start_x;
-                        total_dy = SNAP_Y - start_y;
+                        // Visual anchors to tgt node
+                        SNAP_X = node.canvas_position_x;
+                        SNAP_Y = node.canvas_position_y;
+                        SNAP_DX = -1; // Up-right
+                        
+                        // Physical anchors
+                        double rel_x = (snap_px_x - CANVAS_MARGIN) / (width - 2 * CANVAS_MARGIN);
+                        double rel_y = (snap_px_y - CANVAS_MARGIN) / (height - 2 * CANVAS_MARGIN);
+                        total_dx = rel_x - start_x;
+                        total_dy = rel_y - start_y;
                     }
                 }
             }
@@ -634,6 +662,7 @@ void ThermalCanvas::OnMouseLeftUp(wxMouseEvent &event)
     m_is_dragging = false;
     SNAP_X = -1;
     SNAP_Y = -1;
+    SNAP_DX = 0;
 
     if (m_is_box_selecting)
     {
@@ -693,18 +722,22 @@ void ThermalCanvas::DeleteSelectedItems()
 {
     if (m_sel_node_ids.empty() && m_sel_edge_index == -1) return;
 
-    // Delete all selected nodes and their connected edges
-    for (int id : m_sel_node_ids) {
-        m_network->network_nodes.erase(id);
-        m_network->network_edges.erase(
-            std::remove_if(m_network->network_edges.begin(), m_network->network_edges.end(),
-                           [id](const ThermalEdge &e) { return e.id_0 == id || e.id_1 == id; }),
-            m_network->network_edges.end());
-    }
+    // Delete the edges first
+    m_network->network_edges.erase(
+        std::remove_if(
+            m_network->network_edges.begin(), m_network->network_edges.end(),
+            [&](ThermalEdge& e){
+                bool connectedToDeletedNode = m_sel_node_ids.count(e.id_0) || m_sel_node_ids.count(e.id_1);
+                bool markedForDeletion = (m_sel_edge_index != -1 && &e == &m_network->network_edges[m_sel_edge_index]);
+                return connectedToDeletedNode || markedForDeletion;
+            }
+        ),
+        m_network->network_edges.end());
 
-    // Delete selected edge (if one is selected)
-    if (m_sel_edge_index != -1 && m_sel_edge_index < m_network->network_edges.size()) {
-        m_network->network_edges.erase(m_network->network_edges.begin() + m_sel_edge_index);
+    // Delete the nodes
+    for (int id : m_sel_node_ids)
+    {
+        m_network->network_nodes.erase(id);
     }
 
     // Clear memory and UI
@@ -732,8 +765,8 @@ void ThermalCanvas::PasteSelected()
     for (ThermalNode& node : m_clipboard_nodes) {
         // Shift the node so it doesn't perfectly hide under the original
         ThermalNode new_node = node;
-        new_node.canvas_position_x = std::clamp(new_node.canvas_position_x + 0.05, 0.0, 1.0);
-        new_node.canvas_position_y = std::clamp(new_node.canvas_position_y + 0.05, 0.0, 1.0);
+        new_node.canvas_position_x = std::clamp(new_node.canvas_position_x + 0.03, 0.0, 1.0);
+        new_node.canvas_position_y = std::clamp(new_node.canvas_position_y + 0.03, 0.0, 1.0);
         
         // Add to network and select the newly generated ID
         int new_id = m_network->add_node(new_node);

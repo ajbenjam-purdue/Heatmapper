@@ -1,5 +1,5 @@
 # Heatmapper
-### Version 0.1.8 | March 10, 2026
+### Version 0.1.9 | March 12, 2026
 Cross platform GUI Heatmapper tool
 
 ## What is this, who is it for?
@@ -38,6 +38,12 @@ cmake --build build
 ```
 
 ## Changelog
+
+### 0.1.9
+
+ - Added substantial feature: Materials library manager, allowing a user to add and delete materials, edit material properties, or import full new .json dictionaries from external sources. 
+ - Fixed node deletion segfault bug.
+ - Tightened snapping tolerances and improved behavior.
 
 ### 0.1.8
 

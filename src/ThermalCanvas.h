@@ -14,10 +14,11 @@ enum class ToolMode {
 
 class ThermalCanvas : public wxPanel {
 public:
-    const static int CANVAS_MARGIN = 20; // pixels, on each side
-    const static int EDGE_SELECTION_TOLERANCE = 12; // pixels away for valid hit
+    const static int CANVAS_MARGIN = 15; // pixels, on each side
+    const static int EDGE_SELECTION_TOLERANCE = 8; // pixels away for valid hit
+    const static int DISTANCE_NO_SNAP = 40; // pixels away for any snap to be considered
     const static float constexpr NODE_RADIUS = 10.0; // pixels
-    const static float constexpr SNAP_MARGIN = 8; // pixels
+    const static float constexpr SNAP_MARGIN = 6; // pixels
 
     const wxColour COLOR_UNKNOWN = wxColour(120, 120, 140); // Color for nodes with unknown values
     const wxColour COLOR_SELECT = wxColour(215, 200, 0); // Color for actively selected node/edge
@@ -41,6 +42,7 @@ public:
     //Snapping
     double SNAP_X = -1.0; // Init and held at -1 unless real coords exist. 
     double SNAP_Y = -1.0; // Relative (0-1)
+    int SNAP_DX = 0; // DIAGONAL snap direction (1 = /, -1 = \)
 
     // Interaction
     void OnMouseLeftDown(wxMouseEvent& event);

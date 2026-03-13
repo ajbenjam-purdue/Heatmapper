@@ -2,6 +2,7 @@
 #include <cmath>
 #include <algorithm>
 #include <tuple>
+#include <vector>
 
 const double PI = 3.14159265358979323846; 
 
@@ -50,4 +51,46 @@ std::tuple<double, double, double, double> line_info(double x1, double y1, doubl
     dx /= r;
     dy /= r;
     return std::tuple((x1 + x2) / 2.0, (y1 + y2) / 2.0, dx, dy);
+}
+
+// Returns the points (xa, ya, xb, yb) which lies on the boundary provided and the extension of the line between (x0, y0), (x1, y1)
+std::tuple<double, double, double, double> extended_line(double x0, double y0, double x1, double y1, double boundary_x, double boundary_y)
+{
+    double dx = x1 - x0;
+    double dy = y1 - y0;
+
+    std::vector<std::pair<double,double>> hits;
+
+    auto try_add = [&](double t)
+    {
+        double x = x0 + t*dx;
+        double y = y0 + t*dy;
+
+        if (x >= 0 && x <= boundary_x &&
+            y >= 0 && y <= boundary_y)
+        {
+            hits.emplace_back(x,y);
+        }
+    };
+
+    if (dx != 0)
+    {
+        // x = 0, x = boundary_x
+        try_add((0 - x0)/dx);
+        try_add((boundary_x - x0)/dx);
+    }
+
+    if (dy != 0)
+    {
+        // y = 0, y = boundary_y
+        try_add((0 - y0)/dy);
+        try_add((boundary_y - y0)/dy);
+    }
+
+    // Should have exactly two intersections for a valid line
+    if (hits.size() < 2)
+        return {0,0,0,0};
+
+    return {hits[0].first, hits[0].second,
+            hits[1].first, hits[1].second};
 }
