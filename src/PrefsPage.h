@@ -22,6 +22,9 @@ private:
     wxSpinCtrl* m_node_size;
     wxChoice* m_scheme;
     wxTextCtrl* m_default_dt;
+    wxTextCtrl* m_ss_iterations_max;
+    wxTextCtrl* m_ss_relaxation;
+    wxTextCtrl* m_ss_tolerance_max;
     wxSpinCtrlDouble* m_default_ambient;
 
     // bind events so Mac applies changes instantly

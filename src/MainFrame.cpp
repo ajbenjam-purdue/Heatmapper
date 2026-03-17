@@ -38,7 +38,16 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
 wxEND_EVENT_TABLE()
 
 void MainFrame::OnRunSteadyState(wxCommandEvent& event) {
-    ThermalSolver::solveSteadyState(m_active_network);
+
+    // Create configuration
+    ThermalSolver::SimulationConfig steadyStateConfiguration;
+    steadyStateConfiguration.residual_threshold = (double)(wxConfigBase::Get()->ReadDouble("Sim/MaxSSTolerance", 0.1));
+    steadyStateConfiguration.max_ss_iterations = (int)(wxConfigBase::Get()->ReadLong("/Sim/MaxSSIterations", 100));
+    steadyStateConfiguration.ss_relaxation = (double)(wxConfigBase::Get()->ReadDouble("/Sim/SSRelaxation", 0.75));
+    
+    std::cout << "Starting with config: " << "MaxSSTolerance=" << steadyStateConfiguration.residual_threshold << ", MaxSSIterations=" << steadyStateConfiguration.max_ss_iterations << ", SSRelaxation=" << steadyStateConfiguration.ss_relaxation << std::endl;
+
+    ThermalSolver::solveSteadyState(m_active_network, steadyStateConfiguration);
     m_canvas->Refresh();
 }
 void MainFrame::OnRunTransient(wxCommandEvent& event) {

@@ -1,7 +1,7 @@
 #include "ThermalSolver.h"
 #include <chrono>
 
-void ThermalSolver::solveSteadyState(ThermalNetwork &network)
+void ThermalSolver::solveSteadyState(ThermalNetwork &network, SimulationConfig config)
 {
     int N = network.get_node_count(); // Count of nodes in the network
     if (N == 0) // No nodes
@@ -27,10 +27,10 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network)
 
     // Iteration trackers
     int iter = 0;
-    int max_iter = 500; // TODO: ADD INTEGRATION WITH PREFS
-    double tolerance = 1e-4; // TODO: ADD INTEGRATION WITH PREFS
-    double max_residual = 1.0; // Celcius
-    double alpha = 0.6; // TODO: ADD INTEGRATION WITH PREFS
+    int max_iter = config.max_ss_iterations;
+    double tolerance = config.residual_threshold;
+    double max_residual = 1.0; // Celcius placeholder
+    double alpha = config.ss_relaxation;
 
     // Outer loop
     while (iter < max_iter && max_residual > tolerance)
