@@ -1,5 +1,7 @@
 #pragma once
 #include <wx/wx.h>
+#include <wx/config.h>
+#include <wx/graphics.h>
 #include <unordered_set>
 #include "ThermalNetwork.h"
 #include "MainFrame.h"
@@ -17,8 +19,9 @@ public:
     const static int CANVAS_MARGIN = 15; // pixels, on each side
     const static int EDGE_SELECTION_TOLERANCE = 8; // pixels away for valid hit
     const static int DISTANCE_NO_SNAP = 40; // pixels away for any snap to be considered
-    const static float constexpr NODE_RADIUS = 10.0; // pixels
     const static float constexpr SNAP_MARGIN = 6; // pixels
+
+    float NODE_RADIUS = 10;
 
     const wxColour COLOR_UNKNOWN = wxColour(120, 120, 140); // Color for nodes with unknown values
     const wxColour COLOR_SELECT = wxColour(215, 200, 0); // Color for actively selected node/edge

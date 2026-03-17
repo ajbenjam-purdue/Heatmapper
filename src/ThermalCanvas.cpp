@@ -1,6 +1,4 @@
 #include "ThermalCanvas.h"
-#include "utils.h"
-#include <wx/graphics.h>
 
 wxBEGIN_EVENT_TABLE(ThermalCanvas, wxPanel)
     EVT_PAINT(ThermalCanvas::OnPaint)
@@ -34,6 +32,9 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     // Get the current window size so we can scale the 0.0-1.0 coordinates
     int width, height;
     GetClientSize(&width, &height);
+
+    // Adjust node size based on preferences
+    NODE_RADIUS = (float)(wxConfigBase::Get()->ReadLong("/UI/NodeRadius", 15));
 
     // Draw snapping guides
     gc->SetPen(wxPen(COLOR_GUIDE, 1));
@@ -147,7 +148,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         // Heat flux out/in
         if (std::abs(node.ext_load) > 0.0)
         {
-            gc->SetPen(wxPen(wxColour(255, 120, 0), 3)); // 3px Orange Pen
+            gc->SetPen(wxPen(wxColour(255, 120, 0), 2)); // 2px Orange Pen
 
             // The tip of the arrow rests just outside the top edge of the circle
             double tip_x = center_x;
@@ -177,9 +178,11 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         }
         else
         {
+            // std::cout << "Min " << min_node_temperature << "; Max " << max_node_temperature << std::endl;
             double rat = (node.node_temperature - min_node_temperature) / (max_node_temperature - min_node_temperature);
-            gc->SetBrush(wxBrush(wxColour((int)(200 * rat) + 30, 35, int(200 * (1 - rat)) + 30)));
-            gc->SetPen(wxPen(wxColour((int)(200 * rat) + 10, 15, int(200 * (1 - rat)) + 10)));
+            wxColor fillColor = map_color(rat);
+            gc->SetBrush(fillColor);
+            gc->SetPen(darken_by(fillColor, 20));
         }
 
         // Selection pen
@@ -236,8 +239,8 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         }
 
         double angle = best_angle + PI / 2; // 0 = straight up, + = clockwise
-        double text_x = center_x - text_w / 2.0 + std::sin(angle) * (NODE_RADIUS + text_w / 2 + 6);
-        double text_y = center_y - text_h / 2.0 - std::cos(angle) * (NODE_RADIUS + text_h / 2 + 6);
+        double text_x = center_x - text_w / 2.0 + std::sin(angle) * (NODE_RADIUS + text_w / 2 + 10);
+        double text_y = center_y - text_h / 2.0 - std::cos(angle) * (NODE_RADIUS + text_h / 2 + 10);
 
         // Draw text
         gc->DrawText(temp_text, text_x, text_y);
@@ -382,7 +385,8 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
     case ToolMode::ADD_NODE:
     {
         // Create a node with default parameters and add to network
-        ThermalNode new_node(norm_x, norm_y, 1.0, 500.0, "New Node", 0, 15.0);
+        double node_temperature = get_default_temperature();
+        ThermalNode new_node(norm_x, norm_y, 1.0, 500.0, "New Node", 0, node_temperature);
         int new_node_id = m_network->add_node(new_node);
 
         // If user is pressing shift, multi add. Otherwise, edit properties

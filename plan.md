@@ -25,6 +25,7 @@ No dates. Things will come when they come.
 4. Developer ease of use
 
     - Modularize the implementation of new resistance types, to boil down to essentially a list of inputs, assets (svg), and outputs.
+    - Preferences: Autosave, solver damping, etc.
 
 ### Fixes
 

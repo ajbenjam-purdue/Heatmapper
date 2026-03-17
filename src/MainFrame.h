@@ -6,6 +6,7 @@
 #include <wx/bmpbndl.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
+#include <wx/preferences.h>
 #include "ThermalNetwork.h"
 #include "MaterialLibrary.h"
 #include "MaterialDialog.h"
@@ -14,6 +15,8 @@
 #include "EdgeConfigDialog.h"
 #include "DiscretizeDialog.h"
 #include "json.hpp"
+#include "PrefsPage.h"
+#include "utils.h"
 
 class ThermalCanvas; // Fwd declaration
 
@@ -29,6 +32,7 @@ public:
     void ForceSelectTool();
     void UpdateToolbarIcons();
     void UpdateDynamicMenus();
+    void OnPreferences(wxCommandEvent& evt);
 
 private:
 
@@ -59,6 +63,8 @@ private:
 
     ThermalNetwork m_active_network;
     ThermalCanvas* m_canvas;
+
+    wxPreferencesEditor m_prefs_editor;
 
     void OnOpen(wxCommandEvent& event);
     void OnSaveAs(wxCommandEvent& event);
