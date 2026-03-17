@@ -1,6 +1,7 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/config.h>
+#include <wx/graphics.h>
 #include <unordered_set>
 #include "ThermalNetwork.h"
 #include "MainFrame.h"

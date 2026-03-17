@@ -1,6 +1,4 @@
 #include "ThermalCanvas.h"
-#include "utils.h"
-#include <wx/graphics.h>
 
 wxBEGIN_EVENT_TABLE(ThermalCanvas, wxPanel)
     EVT_PAINT(ThermalCanvas::OnPaint)
@@ -385,7 +383,8 @@ void ThermalCanvas::OnMouseLeftDown(wxMouseEvent &event)
     case ToolMode::ADD_NODE:
     {
         // Create a node with default parameters and add to network
-        ThermalNode new_node(norm_x, norm_y, 1.0, 500.0, "New Node", 0, 15.0);
+        double node_temperature = get_default_temperature();
+        ThermalNode new_node(norm_x, norm_y, 1.0, 500.0, "New Node", 0, node_temperature);
         int new_node_id = m_network->add_node(new_node);
 
         // If user is pressing shift, multi add. Otherwise, edit properties

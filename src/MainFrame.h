@@ -16,6 +16,7 @@
 #include "DiscretizeDialog.h"
 #include "json.hpp"
 #include "PrefsPage.h"
+#include "utils.h"
 
 class ThermalCanvas; // Fwd declaration
 

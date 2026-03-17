@@ -139,8 +139,10 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     ResetPropertiesWindow();
 
     // Populate the network with some test data 
-    m_active_network.add_node(ThermalNode(0.25, 0.5, 1.0, 500.0, "Node A", 0));
-    m_active_network.add_node(ThermalNode(0.75, 0.5, 1.0, 500.0, "Node B", 1));
+    double default_temperature;
+    default_temperature = get_default_temperature();
+    m_active_network.add_node(ThermalNode(0.25, 0.5, 1.0, 500.0, "Node A", 0, default_temperature));
+    m_active_network.add_node(ThermalNode(0.75, 0.5, 1.0, 500.0, "Node B", 1, default_temperature));
     
     // Connect them
     m_active_network.add_edge(ThermalEdge(0, 1, PureResistance{10.0}));

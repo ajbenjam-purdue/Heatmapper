@@ -1,5 +1,4 @@
 #include "PrefsPage.h"
-#include <wx/config.h>
 
 wxBEGIN_EVENT_TABLE(GeneralPrefsPanel, wxPanel)
     EVT_CHECKBOX(wxID_ANY, GeneralPrefsPanel::OnPrefChanged)
@@ -68,15 +67,24 @@ GeneralPrefsPanel::GeneralPrefsPanel(wxWindow* parent) : wxPanel(parent) {
 }
 
 bool GeneralPrefsPanel::TransferDataToWindow() {
+    m_is_loading = true;
+
     wxConfigBase* config = wxConfigBase::Get();
-    if (!config) return false;
+    if (!config)
+    {
+        m_is_loading = false;
+        return false;
+    }
 
     m_autosave_enable->SetValue(config->ReadBool("/Autosave/Enabled", true));
     m_autosave_mins->SetValue(config->ReadLong("/Autosave/Interval", 5));
     m_node_size->SetValue(config->ReadLong("/UI/NodeRadius", 15));
     m_default_dt->SetValue(config->Read("/Sim/DefaultDt", "0.01"));
-    m_default_ambient->SetValue(config->ReadDouble("/Sim/DefaultAmbient", 15.0));
+    double ambient_val = 15.0; 
+    config->Read("/Sim/DefaultAmbient", &ambient_val, 15.0); 
+    m_default_ambient->SetValue(ambient_val);
 
+    m_is_loading = false;
     return true;
 }
 
@@ -96,14 +104,29 @@ bool GeneralPrefsPanel::TransferDataFromWindow() {
 
 // Real-time hook so MacOS applies settings instantly without an "OK" button (Thanks, Gemini!)
 void GeneralPrefsPanel::OnPrefChanged(wxCommandEvent& event) {
+    if (m_is_loading) {
+        event.Skip();
+        return;
+    }
+    
     TransferDataFromWindow();
     event.Skip();
 }
 void GeneralPrefsPanel::OnSpinPrefChanged(wxSpinEvent& event) {
+    if (m_is_loading) {
+        event.Skip();
+        return;
+    }
+    
     TransferDataFromWindow();
     event.Skip();
 }
 void GeneralPrefsPanel::OnSpinDoublePrefChanged(wxSpinDoubleEvent& event) {
+    if (m_is_loading) {
+        event.Skip();
+        return;
+    }
+    
     TransferDataFromWindow();
     event.Skip();
 }

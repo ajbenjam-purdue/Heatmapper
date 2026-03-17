@@ -3,17 +3,19 @@
 #include <algorithm>
 #include <tuple>
 #include <vector>
+#include <wx/wx.h>
+#include <wx/config.h>
 
 const double PI = 3.14159265358979323846; 
 
 // Perpendicular distance from the point (x0, y0) to the line between (x1, y1) and (x2, y2)
-double distance_perpendicular(double x0, double y0, double x1, double y1, double x2, double y2)
+inline double distance_perpendicular(double x0, double y0, double x1, double y1, double x2, double y2)
 {
     return std::abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1) / std::sqrt((y2 - y1)*(y2 - y1) + (x2 - x1)*(x2 - x1));
 }
 
 // Returns true if the point (x0, y0) lies in the bounding box from (x1, y1) to (x2, y2)
-bool in_bounding_box(double x0, double y0, double x1, double y1, double x2, double y2)
+inline bool in_bounding_box(double x0, double y0, double x1, double y1, double x2, double y2)
 {
     double tol = 10.0; // pixels
     double x_l = std::min(x1, x2) - tol;
@@ -25,7 +27,7 @@ bool in_bounding_box(double x0, double y0, double x1, double y1, double x2, doub
 }
 
 // Cartesian distance between two points
-double distance_cartesian(double x0, double y0, double x1, double y1)
+inline double distance_cartesian(double x0, double y0, double x1, double y1)
 {
     return std::sqrt((x0-x1)*(x0-x1)+(y0-y1)*(y0-y1));
 }
@@ -33,7 +35,7 @@ double distance_cartesian(double x0, double y0, double x1, double y1)
 // Returns the closest point to the point (x0, y0) which lies on the line between (x1, y1) and (x2, y2).
 // Don't use with vertical lines
 // Reference: https://stackoverflow.com/questions/5204619/
-std::pair<double, double> enforce_diagonal(double x0, double y0, double x1, double y1, double x2, double y2)
+inline std::pair<double, double> enforce_diagonal(double x0, double y0, double x1, double y1, double x2, double y2)
 {
     double m1 = (y2 - y1) / (x2 - x1);
     double m2 = -1.0 / m1;
@@ -43,7 +45,7 @@ std::pair<double, double> enforce_diagonal(double x0, double y0, double x1, doub
 }
 
 // Returns (center x, center y, dx [norm to 1], dy [norm to 1]) for the line between (x1, y1) and (x2, y2).
-std::tuple<double, double, double, double> line_info(double x1, double y1, double x2, double y2)
+inline std::tuple<double, double, double, double> line_info(double x1, double y1, double x2, double y2)
 {
     double dx = x2 - x1;
     double dy = y2 - y1;
@@ -54,7 +56,7 @@ std::tuple<double, double, double, double> line_info(double x1, double y1, doubl
 }
 
 // Returns the points (xa, ya, xb, yb) which lies on the boundary provided and the extension of the line between (x0, y0), (x1, y1)
-std::tuple<double, double, double, double> extended_line(double x0, double y0, double x1, double y1, double boundary_x, double boundary_y)
+inline std::tuple<double, double, double, double> extended_line(double x0, double y0, double x1, double y1, double boundary_x, double boundary_y)
 {
     double dx = x1 - x0;
     double dy = y1 - y0;
@@ -93,4 +95,12 @@ std::tuple<double, double, double, double> extended_line(double x0, double y0, d
 
     return {hits[0].first, hits[0].second,
             hits[1].first, hits[1].second};
+}
+
+// Returns the default temperature of a node, provided it exists in settings.
+inline double get_default_temperature()
+{
+    double default_temp;
+    wxConfigBase::Get()->Read("/Sim/DefaultAmbient", &default_temp, 15.0);
+    return default_temp;
 }

@@ -3,6 +3,7 @@
 #include <wx/preferences.h>
 #include <wx/spinctrl.h>
 #include <wx/valnum.h>
+#include <wx/config.h>
 
 // UI panel
 class GeneralPrefsPanel : public wxPanel {
@@ -13,6 +14,8 @@ public:
     virtual bool TransferDataFromWindow() override;
 
 private:
+    bool m_is_loading = false;
+    
     wxCheckBox* m_autosave_enable;
     wxSpinCtrl* m_autosave_mins;
     wxSpinCtrl* m_node_size;
