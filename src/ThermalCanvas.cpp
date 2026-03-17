@@ -148,7 +148,7 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         // Heat flux out/in
         if (std::abs(node.ext_load) > 0.0)
         {
-            gc->SetPen(wxPen(wxColour(255, 120, 0), 3)); // 3px Orange Pen
+            gc->SetPen(wxPen(wxColour(255, 120, 0), 2)); // 2px Orange Pen
 
             // The tip of the arrow rests just outside the top edge of the circle
             double tip_x = center_x;
@@ -178,9 +178,11 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         }
         else
         {
+            // std::cout << "Min " << min_node_temperature << "; Max " << max_node_temperature << std::endl;
             double rat = (node.node_temperature - min_node_temperature) / (max_node_temperature - min_node_temperature);
-            gc->SetBrush(wxBrush(wxColour((int)(200 * rat) + 30, 35, int(200 * (1 - rat)) + 30)));
-            gc->SetPen(wxPen(wxColour((int)(200 * rat) + 10, 15, int(200 * (1 - rat)) + 10)));
+            wxColor fillColor = map_color(rat);
+            gc->SetBrush(fillColor);
+            gc->SetPen(darken_by(fillColor, 20));
         }
 
         // Selection pen

@@ -4,6 +4,7 @@
 #include <wx/spinctrl.h>
 #include <wx/valnum.h>
 #include <wx/config.h>
+#include <wx/choice.h>
 
 // UI panel
 class GeneralPrefsPanel : public wxPanel {
@@ -15,10 +16,11 @@ public:
 
 private:
     bool m_is_loading = false;
-    
+
     wxCheckBox* m_autosave_enable;
     wxSpinCtrl* m_autosave_mins;
     wxSpinCtrl* m_node_size;
+    wxChoice* m_scheme;
     wxTextCtrl* m_default_dt;
     wxSpinCtrlDouble* m_default_ambient;
 

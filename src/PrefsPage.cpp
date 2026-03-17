@@ -5,6 +5,7 @@ wxBEGIN_EVENT_TABLE(GeneralPrefsPanel, wxPanel)
     EVT_TEXT(wxID_ANY, GeneralPrefsPanel::OnPrefChanged)
     EVT_SPINCTRL(wxID_ANY, GeneralPrefsPanel::OnSpinPrefChanged)
     EVT_SPINCTRLDOUBLE(wxID_ANY, GeneralPrefsPanel::OnSpinDoublePrefChanged)
+    EVT_CHOICE(wxID_ANY, GeneralPrefsPanel::OnPrefChanged)
 wxEND_EVENT_TABLE()
 
 GeneralPrefsPanel::GeneralPrefsPanel(wxWindow* parent) : wxPanel(parent) {
@@ -52,7 +53,6 @@ GeneralPrefsPanel::GeneralPrefsPanel(wxWindow* parent) : wxPanel(parent) {
     wxBoxSizer* row4 = new wxBoxSizer(wxHORIZONTAL);
     row4->Add(new wxStaticText(this, wxID_ANY, "Ambient Node Temp (°C):"), 1, wxALIGN_CENTER_VERTICAL);
     
-    // TODO: Fix this scallywag
     m_default_ambient = new wxSpinCtrlDouble(this, wxID_ANY);
     m_default_ambient->SetRange(-273.15, 1250.0);
     m_default_ambient->SetIncrement(0.5);
@@ -60,6 +60,19 @@ GeneralPrefsPanel::GeneralPrefsPanel(wxWindow* parent) : wxPanel(parent) {
     
     row4->Add(m_default_ambient, 1, wxEXPAND);
     sim_sizer->Add(row4, 0, wxALL | wxEXPAND, 5);
+
+    wxBoxSizer* row5 = new wxBoxSizer(wxHORIZONTAL);
+    row5->Add(new wxStaticText(this, wxID_ANY, "Node Color Scheme:"), 1, wxALIGN_CENTER_VERTICAL);
+    
+    wxArrayString unit_choices;
+    unit_choices.Add("Viridis");
+    unit_choices.Add("Plasma");
+    unit_choices.Add("Magma");
+    
+    m_scheme = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, unit_choices);
+    
+    row5->Add(m_scheme, 1, wxEXPAND);
+    ui_sizer->Add(row5, 0, wxALL | wxEXPAND, 5);
 
     main_sizer->Add(sim_sizer, 0, wxEXPAND | wxALL, 10);
 
@@ -84,6 +97,15 @@ bool GeneralPrefsPanel::TransferDataToWindow() {
     config->Read("/Sim/DefaultAmbient", &ambient_val, 15.0); 
     m_default_ambient->SetValue(ambient_val);
 
+    // Colors
+    wxString saved_unit = config->Read("/UI/NodeScheme", "Celsius");
+    int choice_index = m_scheme->FindString(saved_unit);
+    if (choice_index != wxNOT_FOUND) {
+        m_scheme->SetSelection(choice_index);
+    } else {
+        m_scheme->SetSelection(0); 
+    }
+
     m_is_loading = false;
     return true;
 }
@@ -97,6 +119,7 @@ bool GeneralPrefsPanel::TransferDataFromWindow() {
     config->Write("/UI/NodeRadius", m_node_size->GetValue());
     config->Write("/Sim/DefaultDt", m_default_dt->GetValue());
     config->Write("/Sim/DefaultAmbient", m_default_ambient->GetValue());
+    config->Write("/UI/NodeScheme", m_scheme->GetStringSelection());
     
     config->Flush(); 
     return true;
@@ -108,7 +131,7 @@ void GeneralPrefsPanel::OnPrefChanged(wxCommandEvent& event) {
         event.Skip();
         return;
     }
-    
+
     TransferDataFromWindow();
     event.Skip();
 }
@@ -117,7 +140,7 @@ void GeneralPrefsPanel::OnSpinPrefChanged(wxSpinEvent& event) {
         event.Skip();
         return;
     }
-    
+
     TransferDataFromWindow();
     event.Skip();
 }
@@ -126,7 +149,7 @@ void GeneralPrefsPanel::OnSpinDoublePrefChanged(wxSpinDoubleEvent& event) {
         event.Skip();
         return;
     }
-    
+
     TransferDataFromWindow();
     event.Skip();
 }

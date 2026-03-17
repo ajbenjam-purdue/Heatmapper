@@ -491,7 +491,7 @@ void MainFrame::UpdateDynamicMenus() {
     menuFile->Append(wxID_SAVEAS, "Save &As .json\tCtrl-Shift-S", "Save the thermal network to JSON");
     menuFile->AppendSeparator();
     menuFile->Append(wxID_CLEAR, "&Reset workspace\tCtrl-Shift-C", "Reset the current workspace");
-    menuFile->Append(ID_OpenMaterialLib, "Open Materials Library\tCrtl-Shift-M", "Open the Materials Library to Add, Edit, or Remove entries");
+    menuFile->Append(ID_OpenMaterialLib, "Open Materials Library\tCtrl-Shift-M", "Open the Materials Library to Add, Edit, or Remove entries");
     menuFile->AppendSeparator();
     menuFile->Append(wxID_PREFERENCES);
     menuFile->Append(wxID_EXIT);
