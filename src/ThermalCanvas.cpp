@@ -35,6 +35,9 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     int width, height;
     GetClientSize(&width, &height);
 
+    // Adjust node size based on preferences
+    NODE_RADIUS = (float)(wxConfigBase::Get()->ReadLong("/UI/NodeRadius", 15));
+
     // Draw snapping guides
     gc->SetPen(wxPen(COLOR_GUIDE, 1));
 
@@ -236,8 +239,8 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
         }
 
         double angle = best_angle + PI / 2; // 0 = straight up, + = clockwise
-        double text_x = center_x - text_w / 2.0 + std::sin(angle) * (NODE_RADIUS + text_w / 2 + 6);
-        double text_y = center_y - text_h / 2.0 - std::cos(angle) * (NODE_RADIUS + text_h / 2 + 6);
+        double text_x = center_x - text_w / 2.0 + std::sin(angle) * (NODE_RADIUS + text_w / 2 + 10);
+        double text_y = center_y - text_h / 2.0 - std::cos(angle) * (NODE_RADIUS + text_h / 2 + 10);
 
         // Draw text
         gc->DrawText(temp_text, text_x, text_y);

@@ -1,0 +1,39 @@
+#pragma once
+#include <wx/wx.h>
+#include <wx/preferences.h>
+#include <wx/spinctrl.h>
+#include <wx/valnum.h>
+
+// UI panel
+class GeneralPrefsPanel : public wxPanel {
+public:
+    GeneralPrefsPanel(wxWindow* parent);
+    
+    virtual bool TransferDataToWindow() override;
+    virtual bool TransferDataFromWindow() override;
+
+private:
+    wxCheckBox* m_autosave_enable;
+    wxSpinCtrl* m_autosave_mins;
+    wxSpinCtrl* m_node_size;
+    wxTextCtrl* m_default_dt;
+    wxSpinCtrlDouble* m_default_ambient;
+
+    // bind events so Mac applies changes instantly
+    void OnPrefChanged(wxCommandEvent& event);
+    void OnSpinPrefChanged(wxSpinEvent& event);
+    void OnSpinDoublePrefChanged(wxSpinDoubleEvent& event);
+    
+    wxDECLARE_EVENT_TABLE();
+};
+
+// Page wrapper
+class GeneralPrefsPage : public wxStockPreferencesPage {
+public:
+    // Kind_General automatically gives page the standard cog
+    GeneralPrefsPage() : wxStockPreferencesPage(Kind_General) {}
+    
+    virtual wxWindow* CreateWindow(wxWindow* parent) override {
+        return new GeneralPrefsPanel(parent);
+    }
+};

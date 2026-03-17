@@ -24,6 +24,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_SAVEAS, MainFrame::OnSaveAs)
     EVT_MENU(wxID_EXIT, MainFrame::OnExit)
     EVT_MENU(ID_RunSteadyState, MainFrame::OnRunSteadyState)
+    EVT_MENU(wxID_PREFERENCES, MainFrame::OnPreferences)
     EVT_BUTTON(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
     EVT_BUTTON(ID_OpenEdgeConfig, MainFrame::OnEdgeConfigButtonClicked)
@@ -57,6 +58,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     #if defined(__WXMSW__)
         SetIcon(wxICON(AppIcon));
     #endif
+
+    // Preferences
+    m_prefs_editor.AddPage(new GeneralPrefsPage());
 
     // Build the Canvas
     m_canvas = new ThermalCanvas(this);
@@ -486,6 +490,8 @@ void MainFrame::UpdateDynamicMenus() {
     menuFile->AppendSeparator();
     menuFile->Append(wxID_CLEAR, "&Reset workspace\tCtrl-Shift-C", "Reset the current workspace");
     menuFile->Append(ID_OpenMaterialLib, "Open Materials Library\tCrtl-Shift-M", "Open the Materials Library to Add, Edit, or Remove entries");
+    menuFile->AppendSeparator();
+    menuFile->Append(wxID_PREFERENCES);
     menuFile->Append(wxID_EXIT);
 
     wxMenu* menuRun = new wxMenu;
@@ -656,4 +662,9 @@ void MainFrame::OnMaterialLibOpened(wxCommandEvent& event)
         // Save to the existing path already used to load
         m_materials.save_json(matFilePath.ToStdString()); 
     }
+}
+
+void MainFrame::OnPreferences(wxCommandEvent& event)
+{
+    m_prefs_editor.Show(this);
 }
