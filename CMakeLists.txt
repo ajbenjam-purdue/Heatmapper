@@ -90,6 +90,7 @@ add_executable(Heatmapper WIN32 MACOSX_BUNDLE
     src/ThermalSolver.cpp
     src/ThermalCanvas.cpp
     src/EdgeConfigDialog.cpp
+    src/TransientDialog.cpp
     src/DiscretizeDialog.cpp
     src/MaterialDialog.cpp
     src/PrefsPage.cpp

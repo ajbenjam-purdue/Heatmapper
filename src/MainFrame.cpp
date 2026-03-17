@@ -25,6 +25,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_EXIT, MainFrame::OnExit)
     EVT_MENU(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_MENU(wxID_PREFERENCES, MainFrame::OnPreferences)
+    EVT_BUTTON(ID_RunTransient, MainFrame::OnRunTransient)
     EVT_BUTTON(ID_RunSteadyState, MainFrame::OnRunSteadyState)
     EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
     EVT_BUTTON(ID_OpenEdgeConfig, MainFrame::OnEdgeConfigButtonClicked)
@@ -50,8 +51,29 @@ void MainFrame::OnRunSteadyState(wxCommandEvent& event) {
     ThermalSolver::solveSteadyState(m_active_network, steadyStateConfiguration);
     m_canvas->Refresh();
 }
+
 void MainFrame::OnRunTransient(wxCommandEvent& event) {
-    std::cout << "Transient Run" << std::endl;
+
+    // Create configuration
+    ThermalSolver::SimulationConfig steadyStateConfiguration;
+    steadyStateConfiguration.residual_threshold = (double)(wxConfigBase::Get()->ReadDouble("Sim/MaxSSTolerance", 0.1));
+    steadyStateConfiguration.max_ss_iterations = (int)(wxConfigBase::Get()->ReadLong("/Sim/MaxSSIterations", 100));
+    steadyStateConfiguration.ss_relaxation = (double)(wxConfigBase::Get()->ReadDouble("/Sim/SSRelaxation", 0.75));
+    steadyStateConfiguration.delta_t = (double)(wxConfigBase::Get()->ReadDouble("/Sim/DefaultDt", 0.01));
+
+    TransientDialog dlg(this, steadyStateConfiguration.delta_t);
+
+    if (dlg.ShowModal() == wxID_OK)
+    {
+        steadyStateConfiguration.stop_on_steady_state = dlg.GetSteadyStateEnd();
+        steadyStateConfiguration.delta_t = dlg.GetTimeStep();
+        steadyStateConfiguration.max_time = dlg.GetEndCriteria();
+
+        std::string csv_save_filepath = dlg.GetSaveFilePath();
+        std::cout << "Savepath: " << csv_save_filepath << "\n" << "Starting with config: " << "MaxSSTolerance=" << steadyStateConfiguration.residual_threshold << ", MaxSSIterations=" << steadyStateConfiguration.max_ss_iterations << ", SSRelaxation=" << steadyStateConfiguration.ss_relaxation << std::endl;
+
+        ThermalSolver::solveTransient(m_active_network, steadyStateConfiguration, csv_save_filepath);
+    }
 }
 
 void MainFrame::OnExit(wxCommandEvent& event) {

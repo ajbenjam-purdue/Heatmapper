@@ -13,18 +13,9 @@ namespace ThermalSolver {
         double residual_threshold = 1e-4;   // Upper limit for residuals (SS/TR)
     };
 
-    // Pass the network by ref so the solver modifies the actual network
-    void solveSteadyState(ThermalNetwork& network, SimulationConfig config); // SS solver
+    // Steady State solver
+    void solveSteadyState(ThermalNetwork& network, const SimulationConfig &config);
 
     // Transient solver
-    void solveTransientStep(
-        ThermalNetwork& network, 
-        double delta_t,
-        const Eigen::MatrixXd& K,
-        const Eigen::VectorXd& C_inv, 
-        const Eigen::VectorXd& Q,
-        Eigen::VectorXd& T_current
-    );
-    
-    void runSimulation(ThermalNetwork& network, const SimulationConfig& config);
+    void solveTransient(ThermalNetwork& network, const SimulationConfig& config, std::string &save_path);
 }
