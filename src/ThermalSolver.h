@@ -1,6 +1,8 @@
 #pragma once
 #include "ThermalNetwork.h"
 #include <Eigen/Dense>
+#include <fstream>
+#include <iomanip>
 
 namespace ThermalSolver {
 

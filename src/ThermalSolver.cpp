@@ -105,5 +105,108 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network, const SimulationCo
 
 void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConfig &config, std::string &save_path)
 {
+    double dt = config.delta_t;
+    double total_time = config.max_time;
+    int N = network.get_node_count();
+    if (N == 0 || dt <= 0.0) return;
+
+    // Map IDs to Matrix Indices
+    std::unordered_map<int, int> id_to_index;
+    int current_row = 0;
+    for (const auto& [id, node] : network.network_nodes) {
+        id_to_index[id] = current_row++;
+    }
+
+    // Build Capacitance Vector (C = mass * specific_heat)
+    Eigen::VectorXd C = Eigen::VectorXd::Zero(N);
+    Eigen::VectorXd T_old = Eigen::VectorXd::Zero(N);
     
+    for (const auto& [id, node] : network.network_nodes) {
+        int idx = id_to_index[id];
+        C(idx) = node.property_mass * node.property_specific_heat;
+        T_old(idx) = node.node_temperature; // Seed initial temperatures
+    }
+
+    // Open the CSV File and Write the Header
+    std::ofstream csv_file(save_path);
+    csv_file << "Time (s)";
+    for (int i = 0; i < N; ++i) {
+
+        // Find the node name for the header TODO: Make nice titles indicating BCs
+        for (const auto& [id, node] : network.network_nodes) {
+            if (id_to_index[id] == i) {
+                csv_file << "," << node.property_label;
+                break;
+            }
+        }
+
+    }
+    csv_file << "\n";
+
+    // Time Loop
+    Eigen::MatrixXd K = Eigen::MatrixXd::Zero(N, N);
+    Eigen::VectorXd Q = Eigen::VectorXd::Zero(N);
+
+    for (double time = 0; time <= total_time; time += dt) 
+    {
+        std::cout << "Time " << time << " / " << total_time << " @dt=" << dt << "\n";
+        // Write current state to CSV
+        csv_file << std::fixed << std::setprecision(4) << time;
+        for (int i = 0; i < N; ++i) csv_file << "," << T_old(i);
+        csv_file << "\n";
+
+        // Reset K and Q for this time step
+        K.setZero();
+        Q.setZero();
+
+        // Assemble [K] using T_old
+        for (const ThermalEdge& edge : network.network_edges) {
+            int idx_0 = id_to_index[edge.id_0];
+            int idx_1 = id_to_index[edge.id_1];
+            
+            double t1 = T_old(idx_0);
+            double t2 = T_old(idx_1);
+            double cond = 1.0 / edge.resistance(t1, t2);
+
+            K(idx_0, idx_0) += cond;
+            K(idx_1, idx_1) += cond;
+            K(idx_0, idx_1) -= cond;
+            K(idx_1, idx_0) -= cond;
+        }
+
+        // Build the Implicit Matrices A and b
+        Eigen::MatrixXd A = K;
+        A.diagonal() += (1.0 / dt) * C;
+        Eigen::VectorXd b = (1.0 / dt) * C.cwiseProduct(T_old) + Q;
+
+        // Apply Boundary Conditions
+        for (const auto& [id, node] : network.network_nodes) {
+            int idx = id_to_index[id];
+            
+            if (node.is_fixed_temperature) {
+                // Lock the temperature for the future time step
+                A.row(idx).setZero();
+                A(idx, idx) = 1.0;
+                b(idx) = node.node_temperature; 
+            } else if (node.ext_load != 0.0) {
+                b(idx) += node.ext_load; // Add external loads to the RHS
+            }
+        }
+
+        // Solve for T_new
+        Eigen::VectorXd T_new = A.colPivHouseholderQr().solve(b);
+
+        // Update state for the next time step
+        T_old = T_new; 
+    }
+
+    csv_file.close();
+
+    // Update the network with the very last computed temperatures
+    for (auto& [id, node] : network.network_nodes) {
+        if (!node.is_fixed_temperature) {
+            node.node_temperature = T_old(id_to_index[id]);
+        }
+    }
+    std::cout << "Updated network with transient results" << std::endl;
 }
