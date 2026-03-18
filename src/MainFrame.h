@@ -8,6 +8,7 @@
 #include <wx/config.h>
 #include <format>
 #include <fstream>
+#include <thread>
 #include "ThermalNetwork.h"
 #include "MaterialLibrary.h"
 #include "MaterialDialog.h"

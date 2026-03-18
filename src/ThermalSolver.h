@@ -19,5 +19,5 @@ namespace ThermalSolver {
     void solveSteadyState(ThermalNetwork& network, const SimulationConfig &config);
 
     // Transient solver
-    void solveTransient(ThermalNetwork& network, const SimulationConfig& config, std::string &save_path);
+    void solveTransient(ThermalNetwork& network, const SimulationConfig& config, const std::string &save_path);
 }

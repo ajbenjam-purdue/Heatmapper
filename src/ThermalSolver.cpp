@@ -103,7 +103,7 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network, const SimulationCo
     }
 }
 
-void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConfig &config, std::string &save_path)
+void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConfig &config, const std::string &save_path)
 {
     double dt = config.delta_t;
     double total_time = config.max_time;

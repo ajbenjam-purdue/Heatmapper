@@ -53,26 +53,53 @@ void MainFrame::OnRunSteadyState(wxCommandEvent& event) {
 }
 
 void MainFrame::OnRunTransient(wxCommandEvent& event) {
+    if (m_active_network.get_node_count() == 0) return;
 
     // Create configuration
-    ThermalSolver::SimulationConfig steadyStateConfiguration;
-    steadyStateConfiguration.residual_threshold = (double)(wxConfigBase::Get()->ReadDouble("Sim/MaxSSTolerance", 0.1));
-    steadyStateConfiguration.max_ss_iterations = (int)(wxConfigBase::Get()->ReadLong("/Sim/MaxSSIterations", 100));
-    steadyStateConfiguration.ss_relaxation = (double)(wxConfigBase::Get()->ReadDouble("/Sim/SSRelaxation", 0.75));
-    steadyStateConfiguration.delta_t = (double)(wxConfigBase::Get()->ReadDouble("/Sim/DefaultDt", 0.01));
+    ThermalSolver::SimulationConfig transientConfiguration;
+    transientConfiguration.residual_threshold = (double)(wxConfigBase::Get()->ReadDouble("Sim/MaxSSTolerance", 0.1));
+    transientConfiguration.max_ss_iterations = (int)(wxConfigBase::Get()->ReadLong("/Sim/MaxSSIterations", 100));
+    transientConfiguration.ss_relaxation = (double)(wxConfigBase::Get()->ReadDouble("/Sim/SSRelaxation", 0.75));
+    transientConfiguration.delta_t = (double)(wxConfigBase::Get()->ReadDouble("/Sim/DefaultDt", 0.01));
 
-    TransientDialog dlg(this, steadyStateConfiguration.delta_t);
+    TransientDialog dlg(this, transientConfiguration.delta_t);
 
     if (dlg.ShowModal() == wxID_OK)
     {
-        steadyStateConfiguration.stop_on_steady_state = dlg.GetSteadyStateEnd();
-        steadyStateConfiguration.delta_t = dlg.GetTimeStep();
-        steadyStateConfiguration.max_time = dlg.GetEndCriteria();
+        // Pull user inputs
+        transientConfiguration.stop_on_steady_state = dlg.GetSteadyStateEnd();
+        transientConfiguration.delta_t = dlg.GetTimeStep();
+        transientConfiguration.max_time = dlg.GetEndCriteria();
 
         std::string csv_save_filepath = dlg.GetSaveFilePath();
-        std::cout << "Savepath: " << csv_save_filepath << "\n" << "Starting with config: " << "MaxSSTolerance=" << steadyStateConfiguration.residual_threshold << ", MaxSSIterations=" << steadyStateConfiguration.max_ss_iterations << ", SSRelaxation=" << steadyStateConfiguration.ss_relaxation << std::endl;
+        std::cout << "Savepath: " << csv_save_filepath << "\n" << "Starting with config: " << "MaxSSTolerance=" << transientConfiguration.residual_threshold << ", MaxSSIterations=" << transientConfiguration.max_ss_iterations << ", SSRelaxation=" << transientConfiguration.ss_relaxation << std::endl;
 
-        ThermalSolver::solveTransient(m_active_network, steadyStateConfiguration, csv_save_filepath);
+        // Freeze UI
+        this->Disable();
+        wxSetCursor(wxCURSOR_WAIT);
+
+        std::thread(
+            [this, transientConfiguration, csv_save_filepath]() {
+                
+                // Run sim
+                auto solve_start = std::chrono::steady_clock::now();
+                ThermalSolver::solveTransient(m_active_network, transientConfiguration, csv_save_filepath);
+                auto solve_complete = std::chrono::steady_clock::now();
+
+                // Q message back to main thread
+                this->GetEventHandler()->CallAfter([this, csv_save_filepath, solve_start, solve_complete]() {
+
+                    this->Enable(); 
+                    wxSetCursor(wxNullCursor);
+
+                    // Redraw the canvas with the new temperatures
+                    m_canvas->Refresh();
+                    
+                    // Show the success message
+                    wxMessageBox(wxString::Format("Transient simulation complete (%.2fms elapsed). Data exported to %s", std::chrono::duration<double, std::milli>(solve_complete - solve_start).count(), csv_save_filepath), "Success", wxOK | wxICON_INFORMATION);
+                });
+            }).detach();
+        
     }
 }
 
