@@ -1,12 +1,14 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/artprov.h>
-#include <format>
-#include <fstream>
 #include <wx/bmpbndl.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <wx/preferences.h>
+#include <wx/config.h>
+#include <format>
+#include <fstream>
+#include <thread>
 #include "ThermalNetwork.h"
 #include "MaterialLibrary.h"
 #include "MaterialDialog.h"
@@ -14,6 +16,7 @@
 #include "ThermalSolver.h"
 #include "EdgeConfigDialog.h"
 #include "DiscretizeDialog.h"
+#include "TransientDialog.h"
 #include "json.hpp"
 #include "PrefsPage.h"
 #include "utils.h"
