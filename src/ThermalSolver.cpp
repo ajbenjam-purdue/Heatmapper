@@ -130,17 +130,31 @@ void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConf
     // Open the CSV File and Write the Header
     std::ofstream csv_file(save_path);
     csv_file << "Time (s)";
+
+    // Nodes
     for (int i = 0; i < N; ++i) {
 
-        // Find the node name for the header TODO: Make nice titles indicating BCs
+        // Find the node name for the header
         for (const auto& [id, node] : network.network_nodes) {
             if (id_to_index[id] == i) {
                 csv_file << "," << node.property_label;
+                if (node.is_fixed_temperature)
+                    csv_file << " (Fixed)";
+                else if (std::abs(node.ext_load) > 1e-6)
+                    csv_file << (node.ext_load > 0 ? " (+" : " (-") << node.ext_load << "W)";
+                csv_file << " [C]";
                 break;
             }
         }
-
     }
+
+    // Edges
+    for (int i = 0; i < network.network_edges.size(); i++)
+    {
+        ThermalEdge& edge = network.network_edges.at(i);
+        csv_file << "," << network.network_nodes.at(edge.id_0).property_label << " -> " << network.network_nodes.at(edge.id_1).property_label << " [W]";
+    }
+
     csv_file << "\n";
 
     // Time Loop
@@ -152,7 +166,15 @@ void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConf
         std::cout << "Time " << time << " / " << total_time << " @dt=" << dt << "\n";
         // Write current state to CSV
         csv_file << std::fixed << std::setprecision(4) << time;
-        for (int i = 0; i < N; ++i) csv_file << "," << T_old(i);
+        for (int i = 0; i < N; ++i) csv_file << "," << T_old(i); // Nodes
+        for (int i = 0; i < network.network_edges.size(); i++)   // Edges
+        {
+            ThermalEdge& edge = network.network_edges.at(i);
+            int id_0 = edge.id_0;
+            int id_1 = edge.id_1;
+            double flux = (T_old(id_1) - T_old(id_0)) / edge.resistance(T_old(id_1), T_old(id_0));
+            csv_file << "," << flux;
+        }
         csv_file << "\n";
 
         // Reset K and Q for this time step
