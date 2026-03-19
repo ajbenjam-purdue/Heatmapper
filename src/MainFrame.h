@@ -6,6 +6,7 @@
 #include <wx/stdpaths.h>
 #include <wx/preferences.h>
 #include <wx/config.h>
+#include <wx/valnum.h>
 #include <format>
 #include <fstream>
 #include <thread>
@@ -76,16 +77,20 @@ private:
     wxTextCtrl* m_mass_input;
     wxStaticText* m_cp_label;
     wxTextCtrl* m_cp_input;
-    
-    void OnMaterialSelected(wxCommandEvent& event);
 
+    // Node/Edge property methods
+    void ApplyCurrentProperties();
+    
+    void OnParameterEnter(wxCommandEvent& event);
+    void OnParameterFocusLost(wxFocusEvent& event);
+    void OnMaterialSelected(wxCommandEvent& event);
     void OnOpen(wxCommandEvent& event);
     void OnSaveAs(wxCommandEvent& event);
     void OnClear(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
     void OnRunSteadyState(wxCommandEvent& event);
     void OnRunTransient(wxCommandEvent& event);
-    void OnApplyProperties(wxCommandEvent& event);
+    // void OnApplyProperties(wxCommandEvent& event);
     void OnToolSelect(wxCommandEvent& event);
     void OnCharHook(wxKeyEvent& event);
     void OnEdgeConfigButtonClicked(wxCommandEvent& event);

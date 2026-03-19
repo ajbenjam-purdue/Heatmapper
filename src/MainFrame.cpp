@@ -27,7 +27,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_PREFERENCES, MainFrame::OnPreferences)
     EVT_BUTTON(ID_RunTransient, MainFrame::OnRunTransient)
     EVT_BUTTON(ID_RunSteadyState, MainFrame::OnRunSteadyState)
-    EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
+    // EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
     EVT_BUTTON(ID_OpenEdgeConfig, MainFrame::OnEdgeConfigButtonClicked)
     EVT_MENU(ID_OpenDiscretizer, MainFrame::OnDiscretizeButtonClicked)
     EVT_MENU(ID_OpenMaterialLib, MainFrame::OnMaterialLibOpened)
@@ -120,6 +120,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     // Preferences
     m_prefs_editor.AddPage(new GeneralPrefsPage());
 
+    // Validator for panel
+    wxFloatingPointValidator<double> double_val(2);
+
     // Build the Canvas
     m_canvas = new ThermalCanvas(this);
 
@@ -158,36 +161,66 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     m_mat_choice->Bind(wxEVT_CHOICE, &MainFrame::OnMaterialSelected, this);
     properties_sizer->Add(m_mat_choice, 0, wxALL | wxEXPAND, 5);
 
-    // Mass Input
     m_mass_label = new wxStaticText(properties_panel, wxID_ANY, "Mass (kg):");
     properties_sizer->Add(m_mass_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
-    m_mass_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+
+    // Mass Input
+    m_mass_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
+                                wxDefaultPosition, wxDefaultSize, 
+                                wxTE_PROCESS_ENTER, double_val);
+    m_mass_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
+    m_mass_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
     properties_sizer->Add(m_mass_input, 0, wxALL | wxEXPAND, 5);
 
-    // Specific Heat Input
     m_cp_label = new wxStaticText(properties_panel, wxID_ANY, "Specific Heat (J/kgK):");
     properties_sizer->Add(m_cp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
-    m_cp_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+
+    // Specific Heat Input
+    m_cp_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
+                                wxDefaultPosition, wxDefaultSize, 
+                                wxTE_PROCESS_ENTER, double_val);
+    m_cp_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
+    m_cp_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
     properties_sizer->Add(m_cp_input, 0, wxALL | wxEXPAND, 5);
 
     m_temp_label = new wxStaticText(properties_panel, wxID_ANY, "Temperature (°C):");
     properties_sizer->Add(m_temp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
-    m_temp_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+
+    // Temp Input
+    m_temp_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
+                                wxDefaultPosition, wxDefaultSize, 
+                                wxTE_PROCESS_ENTER, double_val);
+    m_temp_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
+    m_temp_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
     properties_sizer->Add(m_temp_input, 0, wxALL | wxEXPAND, 5);
 
     m_is_fixed_checkbox = new wxCheckBox(properties_panel, wxID_ANY, "Fix Temperature");
+    m_is_fixed_checkbox->Bind(wxEVT_CHECKBOX, &MainFrame::OnParameterEnter, this);
     properties_sizer->Add(m_is_fixed_checkbox, 0, wxALL | wxEXPAND, 5);
 
     m_load_label = new wxStaticText(properties_panel, wxID_ANY, "Heat Load (W):");
     properties_sizer->Add(m_load_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
-    m_load_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    
+    // Load Input
+    m_load_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
+                                wxDefaultPosition, wxDefaultSize, 
+                                wxTE_PROCESS_ENTER, double_val);
+    m_load_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
+    m_load_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
     properties_sizer->Add(m_load_input, 0, wxALL | wxEXPAND, 5);
 
     m_thermal_res_label = new wxStaticText(properties_panel, wxID_ANY, "Thermal Resistance (W/K):");
     properties_sizer->Add(m_thermal_res_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
-    m_res_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+
+    // Raw resistance Input
+    m_res_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
+                                wxDefaultPosition, wxDefaultSize, 
+                                wxTE_PROCESS_ENTER, double_val);
+    m_res_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
+    m_res_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
     properties_sizer->Add(m_res_input, 0, wxALL | wxEXPAND, 5);
 
+    // Flux display
     m_flow_disp_label = new wxStaticText(properties_panel, wxID_ANY, "Calculated Heat Flow (W):");
     properties_sizer->Add(m_flow_disp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
     m_flow_disp = new wxTextCtrl(properties_panel, wxID_ANY, "");
@@ -196,9 +229,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     m_edge_config_button = new wxButton(properties_panel, ID_OpenEdgeConfig, "Open Edge Configuration Tool");
     properties_sizer->Add(m_edge_config_button, 0, wxALL | wxEXPAND, 8);
 
-    // Give this button a new custom ID like ID_ApplyProperties
-    m_apply_button = new wxButton(properties_panel, ID_ApplyProperties, "Apply Changes");
-    properties_sizer->Add(m_apply_button, 0, wxALL | wxEXPAND, 5);
     properties_sizer->AddStretchSpacer(1);
     properties_sizer->Add(run_ss_button, 0, wxEXPAND | wxALL, 8);
     properties_sizer->Add(run_tr_button, 0, wxEXPAND | wxALL, 8);
@@ -334,7 +364,7 @@ void MainFrame::ResetPropertiesWindow() {
     m_flow_disp->Hide();
     m_flow_disp_label->Hide();
     m_edge_config_button->Hide();
-    m_apply_button->Hide();
+    // m_apply_button->Hide();
     m_mat_label->Hide();
     m_mat_choice->Hide();
     m_mass_label->Hide();
@@ -378,7 +408,7 @@ void MainFrame::ShowNodeProperties(int node_id) {
     m_is_fixed_checkbox->Show();
     m_load_input->Show();
     m_load_label->Show();
-    m_apply_button->Show();
+    // m_apply_button->Show();
     m_mat_label->Show();
     m_mat_choice->Show();
     m_mass_label->Show();
@@ -454,7 +484,7 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
     m_flow_disp->Show();
     m_flow_disp_label->Show();
     m_edge_config_button->Show();
-    m_apply_button->Show();
+    // m_apply_button->Show();
 
     // Ensure node properties stay hidden
     m_node_label->Hide();
@@ -477,7 +507,17 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
     UpdateDynamicMenus();
 }
 
-void MainFrame::OnApplyProperties(wxCommandEvent& event) {
+void MainFrame::OnParameterEnter(wxCommandEvent& event) {
+    ApplyCurrentProperties();
+    event.Skip();
+}
+
+void MainFrame::OnParameterFocusLost(wxFocusEvent& event) {
+    ApplyCurrentProperties();
+    event.Skip(); 
+}
+
+void MainFrame::ApplyCurrentProperties() {
     if (m_currently_editing_node != -1) 
     {
 
@@ -818,4 +858,6 @@ void MainFrame::OnMaterialSelected(wxCommandEvent& event) {
         }
         
     }
+
+    ApplyCurrentProperties();
 }
