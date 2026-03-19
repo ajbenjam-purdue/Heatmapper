@@ -17,6 +17,7 @@ public:
     double property_mass;          // kilograms
     double property_specific_heat; // joules per kg-K
     std::string property_label;    // What to label the node
+    std::string material_name = "Custom"; // The material of the node
 
     // Init state
     double node_temperature; // celcius

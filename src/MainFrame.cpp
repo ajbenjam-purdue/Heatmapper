@@ -151,6 +151,25 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     properties_sizer->Add(m_node_label_str, 0, wxALL | wxEXPAND, 5);
     m_node_label_str->Hide();
 
+    m_mat_label = new wxStaticText(properties_panel, wxID_ANY, "Material:");
+    properties_sizer->Add(m_mat_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    
+    m_mat_choice = new wxChoice(properties_panel, wxID_ANY);
+    m_mat_choice->Bind(wxEVT_CHOICE, &MainFrame::OnMaterialSelected, this);
+    properties_sizer->Add(m_mat_choice, 0, wxALL | wxEXPAND, 5);
+
+    // Mass Input
+    m_mass_label = new wxStaticText(properties_panel, wxID_ANY, "Mass (kg):");
+    properties_sizer->Add(m_mass_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_mass_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    properties_sizer->Add(m_mass_input, 0, wxALL | wxEXPAND, 5);
+
+    // Specific Heat Input
+    m_cp_label = new wxStaticText(properties_panel, wxID_ANY, "Specific Heat (J/kgK):");
+    properties_sizer->Add(m_cp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
+    m_cp_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    properties_sizer->Add(m_cp_input, 0, wxALL | wxEXPAND, 5);
+
     m_temp_label = new wxStaticText(properties_panel, wxID_ANY, "Temperature (°C):");
     properties_sizer->Add(m_temp_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
     m_temp_input = new wxTextCtrl(properties_panel, wxID_ANY, "");
@@ -316,6 +335,12 @@ void MainFrame::ResetPropertiesWindow() {
     m_flow_disp_label->Hide();
     m_edge_config_button->Hide();
     m_apply_button->Hide();
+    m_mat_label->Hide();
+    m_mat_choice->Hide();
+    m_mass_label->Hide();
+    m_mass_input->Hide();
+    m_cp_label->Hide();
+    m_cp_input->Hide();
 
     this->Layout(); // Update layout
     UpdateDynamicMenus(); // Update menus
@@ -354,6 +379,12 @@ void MainFrame::ShowNodeProperties(int node_id) {
     m_load_input->Show();
     m_load_label->Show();
     m_apply_button->Show();
+    m_mat_label->Show();
+    m_mat_choice->Show();
+    m_mass_label->Show();
+    m_mass_input->Show();
+    m_cp_label->Show();
+    m_cp_input->Show();
     
     // Ensure edge properties stay hidden
     m_res_input->Hide();
@@ -370,6 +401,31 @@ void MainFrame::ShowNodeProperties(int node_id) {
 
     // Grab the node and populate the text boxes
     ThermalNode& node = m_active_network.network_nodes[node_id];
+
+    // Materials list
+    m_mat_choice->Clear();
+    for (const auto& mat : m_materials.materials) {
+        m_mat_choice->Append(mat.name);
+    }
+    m_mat_choice->Append("Custom");
+
+    m_mass_input->SetValue(wxString::Format("%.3f", node.property_mass));
+    m_cp_input->SetValue(wxString::Format("%.1f", node.property_specific_heat));
+
+    // Try to find the node's saved material in the dropdown
+    int mat_index = m_mat_choice->FindString(node.material_name);
+    if (mat_index != wxNOT_FOUND) {
+        m_mat_choice->SetSelection(mat_index);
+    } else {
+        m_mat_choice->SetSelection(0); // Default to "Custom"
+    }
+
+    // Lock/Unlock the cp box based on selection
+    if (m_mat_choice->GetStringSelection() == "Custom") {
+        m_cp_input->Enable();
+    } else {
+        m_cp_input->Disable(); // Lock to the library value -> disable manual input
+    }
     
     m_node_label->SetLabel(wxString::Format("Editing Node (ID: %d)", node_id));
     m_node_label_str->SetValue(wxString::Format("%s", node.property_label));
@@ -426,6 +482,24 @@ void MainFrame::OnApplyProperties(wxCommandEvent& event) {
     {
 
         ThermalNode& node = m_active_network.network_nodes[m_currently_editing_node];
+
+        // Read the strings
+        wxString mass_str = m_mass_input->GetValue();
+        wxString cp_str = m_cp_input->GetValue();
+        
+        // Save the material name so the dropdown remembers!
+        node.material_name = m_mat_choice->GetStringSelection().ToStdString();
+
+        // Safely parse and apply
+        double new_mass, new_cp;
+
+        // Prevent zero mass/cp
+        if (mass_str.ToDouble(&new_mass)) {
+            node.property_mass = std::max(new_mass, 1e-6); 
+        }
+        if (cp_str.ToDouble(&new_cp)) {
+            node.property_specific_heat = std::max(new_cp, 1e-6);
+        }
 
         // Read the text from the UI
         wxString temp_str = m_temp_input->GetValue();
@@ -727,4 +801,21 @@ void MainFrame::OnMaterialLibOpened(wxCommandEvent& event)
 void MainFrame::OnPreferences(wxCommandEvent& event)
 {
     m_prefs_editor.Show(this);
+}
+
+void MainFrame::OnMaterialSelected(wxCommandEvent& event) {
+    wxString selection = m_mat_choice->GetStringSelection();
+
+    if (selection == "Custom") {
+        m_cp_input->Enable(); // Let the user type whatever they want
+    } else {
+        Material selected_material;
+        
+        if (m_materials.get_material(selection.ToStdString(), selected_material))
+        {
+            m_cp_input->SetValue(wxString::Format("%.1f", selected_material.specific_heat));
+            m_cp_input->Disable();
+        }
+        
+    }
 }

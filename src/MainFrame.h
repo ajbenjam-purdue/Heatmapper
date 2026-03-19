@@ -69,6 +69,16 @@ private:
 
     wxPreferencesEditor m_prefs_editor;
 
+    // Node configuration
+    wxStaticText* m_mat_label;
+    wxChoice* m_mat_choice;
+    wxStaticText* m_mass_label;
+    wxTextCtrl* m_mass_input;
+    wxStaticText* m_cp_label;
+    wxTextCtrl* m_cp_input;
+    
+    void OnMaterialSelected(wxCommandEvent& event);
+
     void OnOpen(wxCommandEvent& event);
     void OnSaveAs(wxCommandEvent& event);
     void OnClear(wxCommandEvent& event);
