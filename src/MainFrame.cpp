@@ -16,6 +16,7 @@ enum {
     ID_OpenEdgeConfig,
     ID_OpenDiscretizer,
     ID_OpenMaterialLib,
+    ID_ResetNodeToAmbient
 };
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -30,6 +31,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     // EVT_BUTTON(ID_ApplyProperties, MainFrame::OnApplyProperties)
     EVT_BUTTON(ID_OpenEdgeConfig, MainFrame::OnEdgeConfigButtonClicked)
     EVT_MENU(ID_OpenDiscretizer, MainFrame::OnDiscretizeButtonClicked)
+    EVT_MENU(ID_ResetNodeToAmbient, MainFrame::OnResetNodeToAmbient)
     EVT_MENU(ID_OpenMaterialLib, MainFrame::OnMaterialLibOpened)
     EVT_TOOL(ID_ToolSelect, MainFrame::OnToolSelect)
     EVT_TOOL(ID_ToolNode, MainFrame::OnToolSelect)
@@ -771,12 +773,19 @@ void MainFrame::UpdateDynamicMenus() {
     new_bar->Append(menuRun, "&Run");
 
     // Conditionally build and attach the Node/Edge menu
-    bool has_nodes = (m_currently_editing_node != -1) || (m_currently_editing_node == -2);
+    bool has_one_node = m_currently_editing_node >= 0;
+    bool has_nodes = m_currently_editing_node == -2;
     bool has_edges = (m_currently_editing_edge != -1);
-    if (has_nodes) {
+    if (has_one_node) {
         wxMenu* nodeMenu = new wxMenu;
         nodeMenu->Append(ID_OpenDiscretizer, "Discretize Node\tCtrl-D", "Replace single node with a multi-node representation");
+        nodeMenu->Append(ID_ResetNodeToAmbient, "Reset Node to Ambient\tCtrl-Shift-A", "Reset node to ambient temperature");
         new_bar->Append(nodeMenu, "&Node");
+    }
+    else if (has_nodes) {
+        wxMenu* nodesMenu = new wxMenu;
+        nodesMenu->Append(ID_ResetNodeToAmbient, "Reset Nodes to Ambient\tCtrl-Shift-A", "Reset node to ambient temperature");
+        new_bar->Append(nodesMenu, "&Nodes");
     }
     else if (has_edges) {
         wxMenu* edgeMenu = new wxMenu;
@@ -813,7 +822,8 @@ void MainFrame::OnEdgeConfigButtonClicked(wxCommandEvent& event)
     }
 }
 
-void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event) {
+void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event)
+{
     if (m_currently_editing_node < 0) return;
 
     DiscretizeDialog dialog(this, m_materials);
@@ -919,6 +929,27 @@ void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event) {
 
         m_canvas->Refresh();
     }
+}
+
+void MainFrame::OnResetNodeToAmbient(wxCommandEvent& event)
+{
+    double default_temp = (double)(wxConfigBase::Get()->ReadDouble("/Sim/DefaultAmbient", 15.0));
+    if (m_currently_editing_node >= 0) // One node selected
+    {
+        ThermalNode& node = m_active_network.network_nodes[m_currently_editing_node];
+        node.node_temperature = default_temp;
+        // std::cout << "Single select reset" << std::endl;
+    }
+    else if (m_canvas->m_sel_node_ids.size() > 0) // More than one selected
+    {
+        for (int id : m_canvas->m_sel_node_ids) {
+            ThermalNode& node = m_active_network.network_nodes[id];
+            node.node_temperature = default_temp;
+        }
+        // std::cout << "Multi select reset" << std::endl;
+    }
+
+    m_canvas->Refresh();
 }
 
 void MainFrame::OnMaterialLibOpened(wxCommandEvent& event)

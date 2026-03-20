@@ -91,6 +91,7 @@ private:
     void OnCharHook(wxKeyEvent& event);
     void OnEdgeConfigButtonClicked(wxCommandEvent& event);
     void OnDiscretizeButtonClicked(wxCommandEvent& event);
+    void OnResetNodeToAmbient(wxCommandEvent& event);
     void OnMaterialLibOpened(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
