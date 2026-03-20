@@ -52,8 +52,6 @@ private:
     wxTextCtrl* m_flow_disp; // Actual number
     wxButton* m_edge_config_button; // Open configuration window button
 
-    wxButton* m_apply_button; // Apply button
-
     // Labels
     wxStaticText* m_temp_label;
     wxStaticText* m_load_label;
@@ -81,8 +79,7 @@ private:
     // Node/Edge property methods
     void ApplyCurrentProperties();
     
-    void OnParameterEnter(wxCommandEvent& event);
-    void OnParameterFocusLost(wxFocusEvent& event);
+    void OnParameterChanged(wxCommandEvent& event);
     void OnMaterialSelected(wxCommandEvent& event);
     void OnOpen(wxCommandEvent& event);
     void OnSaveAs(wxCommandEvent& event);
@@ -90,7 +87,6 @@ private:
     void OnExit(wxCommandEvent& event);
     void OnRunSteadyState(wxCommandEvent& event);
     void OnRunTransient(wxCommandEvent& event);
-    // void OnApplyProperties(wxCommandEvent& event);
     void OnToolSelect(wxCommandEvent& event);
     void OnCharHook(wxKeyEvent& event);
     void OnEdgeConfigButtonClicked(wxCommandEvent& event);

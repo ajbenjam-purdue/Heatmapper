@@ -121,7 +121,8 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     m_prefs_editor.AddPage(new GeneralPrefsPage());
 
     // Validator for panel
-    wxFloatingPointValidator<double> double_val(2);
+    wxFloatingPointValidator<double> double_val(4);
+    wxFloatingPointValidator<double> double_val_mass(3);
 
     // Build the Canvas
     m_canvas = new ThermalCanvas(this);
@@ -151,6 +152,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     m_node_label = new wxStaticText(properties_panel, wxID_ANY, "Select a node...");
     properties_sizer->Add(m_node_label, 0, wxLEFT | wxRIGHT | wxTOP, 5);
     m_node_label_str = new wxTextCtrl(properties_panel, wxID_ANY, "");
+    m_node_label_str->Bind(wxEVT_TEXT, &MainFrame::OnParameterChanged, this);
     properties_sizer->Add(m_node_label_str, 0, wxALL | wxEXPAND, 5);
     m_node_label_str->Hide();
 
@@ -167,9 +169,8 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     // Mass Input
     m_mass_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
                                 wxDefaultPosition, wxDefaultSize, 
-                                wxTE_PROCESS_ENTER, double_val);
-    m_mass_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
-    m_mass_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
+                                0, double_val_mass);
+    m_mass_input->Bind(wxEVT_TEXT, &MainFrame::OnParameterChanged, this);
     properties_sizer->Add(m_mass_input, 0, wxALL | wxEXPAND, 5);
 
     m_cp_label = new wxStaticText(properties_panel, wxID_ANY, "Specific Heat (J/kgK):");
@@ -178,9 +179,8 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     // Specific Heat Input
     m_cp_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
                                 wxDefaultPosition, wxDefaultSize, 
-                                wxTE_PROCESS_ENTER, double_val);
-    m_cp_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
-    m_cp_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
+                                0, double_val);
+    m_cp_input->Bind(wxEVT_TEXT, &MainFrame::OnParameterChanged, this);
     properties_sizer->Add(m_cp_input, 0, wxALL | wxEXPAND, 5);
 
     m_temp_label = new wxStaticText(properties_panel, wxID_ANY, "Temperature (°C):");
@@ -189,13 +189,14 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     // Temp Input
     m_temp_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
                                 wxDefaultPosition, wxDefaultSize, 
-                                wxTE_PROCESS_ENTER, double_val);
-    m_temp_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
-    m_temp_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
+                                0, double_val);
+    m_temp_input->Bind(wxEVT_TEXT, &MainFrame::OnParameterChanged, this);
     properties_sizer->Add(m_temp_input, 0, wxALL | wxEXPAND, 5);
 
-    m_is_fixed_checkbox = new wxCheckBox(properties_panel, wxID_ANY, "Fix Temperature");
-    m_is_fixed_checkbox->Bind(wxEVT_CHECKBOX, &MainFrame::OnParameterEnter, this);
+    m_is_fixed_checkbox = new wxCheckBox(properties_panel, wxID_ANY, "Fix Temperature", 
+                                         wxDefaultPosition, wxDefaultSize, 
+                                         wxCHK_3STATE);
+    m_is_fixed_checkbox->Bind(wxEVT_CHECKBOX, &MainFrame::OnParameterChanged, this);
     properties_sizer->Add(m_is_fixed_checkbox, 0, wxALL | wxEXPAND, 5);
 
     m_load_label = new wxStaticText(properties_panel, wxID_ANY, "Heat Load (W):");
@@ -204,9 +205,8 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     // Load Input
     m_load_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
                                 wxDefaultPosition, wxDefaultSize, 
-                                wxTE_PROCESS_ENTER, double_val);
-    m_load_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
-    m_load_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
+                                0, double_val);
+    m_load_input->Bind(wxEVT_TEXT, &MainFrame::OnParameterChanged, this);
     properties_sizer->Add(m_load_input, 0, wxALL | wxEXPAND, 5);
 
     m_thermal_res_label = new wxStaticText(properties_panel, wxID_ANY, "Thermal Resistance (W/K):");
@@ -215,9 +215,8 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     // Raw resistance Input
     m_res_input = new wxTextCtrl(properties_panel, wxID_ANY, "", 
                                 wxDefaultPosition, wxDefaultSize, 
-                                wxTE_PROCESS_ENTER, double_val);
-    m_res_input->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnParameterEnter, this);
-    m_res_input->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnParameterFocusLost, this);
+                                0, double_val);
+    m_res_input->Bind(wxEVT_TEXT, &MainFrame::OnParameterChanged, this);
     properties_sizer->Add(m_res_input, 0, wxALL | wxEXPAND, 5);
 
     // Flux display
@@ -364,7 +363,6 @@ void MainFrame::ResetPropertiesWindow() {
     m_flow_disp->Hide();
     m_flow_disp_label->Hide();
     m_edge_config_button->Hide();
-    // m_apply_button->Hide();
     m_mat_label->Hide();
     m_mat_choice->Hide();
     m_mass_label->Hide();
@@ -393,14 +391,92 @@ void MainFrame::ShowNodeProperties(int node_id) {
     // Handle Multiple Selection State (-2)
     if (node_id == -2) {
         ResetPropertiesWindow();
-        m_node_label->SetLabel("Multiple Nodes Selected");
+        m_currently_editing_node = -2;
+        m_node_label->SetLabel(wxString::Format("Editing %zu Nodes", m_canvas->m_sel_node_ids.size()));
         m_node_label->Show();
-        m_node_label_str->Hide();
+        
+        m_node_label_str->Hide(); // Hide the unique node label input
+        m_temp_input->Show(); // Show properties
+        m_temp_label->Show();
+        m_is_fixed_checkbox->Show();
+        m_load_input->Show();
+        m_load_label->Show();
+        m_mat_label->Show();
+        m_mat_choice->Show();
+        m_mass_label->Show();
+        m_mass_input->Show();
+        m_cp_label->Show();
+        m_cp_input->Show();
+
+        // first node as a baseline
+        int first_id = *m_canvas->m_sel_node_ids.begin();
+        ThermalNode baseline = m_active_network.network_nodes[first_id];
+
+        // check if all other selected nodes perfectly match the baseline
+        bool same_temp = true, same_load = true, same_mass = true, same_cp = true;
+        bool same_fixed = true; // Temp fix
+
+        for (int id : m_canvas->m_sel_node_ids) {
+            // Get node
+            ThermalNode& n = m_active_network.network_nodes[id];
+
+            // Check properties
+            if (n.node_temperature != baseline.node_temperature) same_temp = false;
+            if (n.ext_load != baseline.ext_load) same_load = false;
+            if (n.property_mass != baseline.property_mass) same_mass = false;
+            if (n.property_specific_heat != baseline.property_specific_heat) same_cp = false;
+
+            // Check if the temp fixed state matches
+            if (n.is_fixed_temperature != baseline.is_fixed_temperature) same_fixed = false;
+        }
+
+        // Set fixed/mixed value
+        if (same_fixed) {
+            m_is_fixed_checkbox->Set3StateValue(baseline.is_fixed_temperature ? wxCHK_CHECKED : wxCHK_UNCHECKED);
+        } else {
+            m_is_fixed_checkbox->Set3StateValue(wxCHK_UNDETERMINED);
+        }
+        
+        // show matching values
+        if (same_temp) m_temp_input->ChangeValue(wxString::Format("%.4f", baseline.node_temperature));
+        else m_temp_input->ChangeValue("");
+        
+        if (same_load) m_load_input->ChangeValue(wxString::Format("%.4f", baseline.ext_load));
+        else m_load_input->ChangeValue("");
+        
+        if (same_mass) m_mass_input->ChangeValue(wxString::Format("%.2f", baseline.property_mass));
+        else m_mass_input->ChangeValue("");
+        
+        if (same_cp) m_cp_input->ChangeValue(wxString::Format("%.1f", baseline.property_specific_heat));
+        else m_cp_input->ChangeValue("");
+
+        // check for matching materials in the batch
+        bool same_mat = true;
+        for (int id : m_canvas->m_sel_node_ids) {
+            if (m_active_network.network_nodes[id].material_name != baseline.material_name) same_mat = false;
+        }
+
+        // populate the dropdown choices
+        m_mat_choice->Clear();
+        for (const auto& mat : m_materials.materials) m_mat_choice->Append(mat.name);
+        m_mat_choice->Append("Custom");
+
+        // set the dropdown state
+        if (same_mat) {
+            int mat_index = m_mat_choice->FindString(baseline.material_name);
+            m_mat_choice->SetSelection(mat_index != wxNOT_FOUND ? mat_index : m_mat_choice->FindString("Custom"));
+            m_cp_input->Enable(m_mat_choice->GetStringSelection() == "Custom");
+        } else {
+            m_mat_choice->SetSelection(wxNOT_FOUND); // Leave it completely blank
+            m_cp_input->Enable(true);
+        }
+
+        UpdateDynamicMenus();
         this->Layout();
         return;
     }
 
-    // Otherwise, show the node properties!
+    // Show the node properties
     m_node_label->Show();
     m_node_label_str->Show();
     m_temp_input->Show();
@@ -408,7 +484,6 @@ void MainFrame::ShowNodeProperties(int node_id) {
     m_is_fixed_checkbox->Show();
     m_load_input->Show();
     m_load_label->Show();
-    // m_apply_button->Show();
     m_mat_label->Show();
     m_mat_choice->Show();
     m_mass_label->Show();
@@ -439,8 +514,8 @@ void MainFrame::ShowNodeProperties(int node_id) {
     }
     m_mat_choice->Append("Custom");
 
-    m_mass_input->SetValue(wxString::Format("%.3f", node.property_mass));
-    m_cp_input->SetValue(wxString::Format("%.1f", node.property_specific_heat));
+    m_mass_input->ChangeValue(wxString::Format("%.3f", node.property_mass));
+    m_cp_input->ChangeValue(wxString::Format("%.1f", node.property_specific_heat));
 
     // Try to find the node's saved material in the dropdown
     int mat_index = m_mat_choice->FindString(node.material_name);
@@ -458,9 +533,9 @@ void MainFrame::ShowNodeProperties(int node_id) {
     }
     
     m_node_label->SetLabel(wxString::Format("Editing Node (ID: %d)", node_id));
-    m_node_label_str->SetValue(wxString::Format("%s", node.property_label));
-    m_temp_input->SetValue(wxString::Format("%.2f", node.node_temperature));
-    m_load_input->SetValue(wxString::Format("%.2f", node.ext_load));
+    m_node_label_str->ChangeValue(wxString::Format("%s", node.property_label));
+    m_temp_input->ChangeValue(wxString::Format("%.4f", node.node_temperature));
+    m_load_input->ChangeValue(wxString::Format("%.4f", node.ext_load));
     m_is_fixed_checkbox->SetValue(node.is_fixed_temperature);
 
     this->Layout();
@@ -484,7 +559,6 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
     m_flow_disp->Show();
     m_flow_disp_label->Show();
     m_edge_config_button->Show();
-    // m_apply_button->Show();
 
     // Ensure node properties stay hidden
     m_node_label->Hide();
@@ -494,96 +568,117 @@ void MainFrame::ShowEdgeProperties(int edge_index) {
     m_is_fixed_checkbox->Hide();
     m_load_input->Hide();
     m_load_label->Hide();
+    m_mat_label->Hide();
+    m_mat_choice->Hide();
+    m_mass_label->Hide();
+    m_mass_input->Hide();
+    m_cp_label->Hide();
+    m_cp_input->Hide();
 
     // Grab the edge and populate the text boxes
     ThermalEdge& edge = m_active_network.network_edges[edge_index];
     double t1 = m_active_network.network_nodes[edge.id_0].node_temperature;
     double t2 = m_active_network.network_nodes[edge.id_1].node_temperature;
     
-    m_res_input->SetValue(wxString::Format("%.4f", edge.resistance(t1, t2)));
-    m_flow_disp->SetValue(wxString::Format("%.2f", std::abs(m_active_network.get_edge_flux(edge_index))));
+    m_res_input->ChangeValue(wxString::Format("%.4f", edge.resistance(t1, t2)));
+    m_flow_disp->ChangeValue(wxString::Format("%.2f", std::abs(m_active_network.get_edge_flux(edge_index))));
 
     this->Layout();
     UpdateDynamicMenus();
 }
 
-void MainFrame::OnParameterEnter(wxCommandEvent& event) {
+void MainFrame::OnParameterChanged(wxCommandEvent& event) {
     ApplyCurrentProperties();
     event.Skip();
 }
 
-void MainFrame::OnParameterFocusLost(wxFocusEvent& event) {
-    ApplyCurrentProperties();
-    event.Skip(); 
-}
-
 void MainFrame::ApplyCurrentProperties() {
-    if (m_currently_editing_node != -1) 
+    
+    // One node
+    if (m_currently_editing_node >= 0) 
     {
-
         ThermalNode& node = m_active_network.network_nodes[m_currently_editing_node];
 
-        // Read the strings
-        wxString mass_str = m_mass_input->GetValue();
-        wxString cp_str = m_cp_input->GetValue();
-        
-        // Save the material name so the dropdown remembers!
-        node.material_name = m_mat_choice->GetStringSelection().ToStdString();
-
-        // Safely parse and apply
-        double new_mass, new_cp;
-
-        // Prevent zero mass/cp
-        if (mass_str.ToDouble(&new_mass)) {
-            node.property_mass = std::max(new_mass, 1e-6); 
-        }
-        if (cp_str.ToDouble(&new_cp)) {
-            node.property_specific_heat = std::max(new_cp, 1e-6);
-        }
-
-        // Read the text from the UI
-        wxString temp_str = m_temp_input->GetValue();
-        wxString load_str = m_load_input->GetValue();
         wxString label_str = m_node_label_str->GetValue();
+        if (!label_str.IsEmpty()) node.property_label = label_str.ToStdString();
 
-        // Apply node label
-        node.property_label = label_str;
+        wxString mat_str = m_mat_choice->GetStringSelection();
+        if (!mat_str.IsEmpty()) node.material_name = mat_str.ToStdString();
 
-        double new_temp, new_load;
-
-        // ToDouble() safely checks if the user typed valid numbers!
-        if (temp_str.ToDouble(&new_temp)) {
-            node.node_temperature = new_temp;
-            
-            // If they explicitly change the temp, fix it as a boundary condition
-            node.fixTemperature(new_temp); 
+        double val;
+        if (m_mass_input->GetValue().ToDouble(&val)) {
+            node.property_mass = std::max(val, 1e-6); 
+        }
+        if (m_cp_input->GetValue().ToDouble(&val)) {
+            node.property_specific_heat = std::max(val, 1e-6);
+        }
+        if (m_load_input->GetValue().ToDouble(&val)) {
+            node.applyHeatLoad(val); 
+        }
+        if (m_temp_input->GetValue().ToDouble(&val)) {
+            node.node_temperature = val;
         }
 
-        if (load_str.ToDouble(&new_load)) {
-            node.applyHeatLoad(new_load);
-        }
-
-        if (m_is_fixed_checkbox->GetValue()) {
-            // If box is checked, make sure to apply BC
-            node.fixTemperature(new_temp); 
-        } else {
-            // Unlock it and apply the heat load instead
+        // 3 state checkbox
+        wxCheckBoxState state = m_is_fixed_checkbox->Get3StateValue();
+        if (state == wxCHK_CHECKED) {
+            node.fixTemperature(node.node_temperature); 
+        } else if (state == wxCHK_UNCHECKED) {
             node.is_fixed_temperature = false;
-            node.node_temperature = new_temp; 
-            node.applyHeatLoad(new_load);     
         }
     }
+    
+    // 2+ nodes
+    else if (m_currently_editing_node == -2)
+    {
+        wxString temp_str = m_temp_input->GetValue();
+        wxString load_str = m_load_input->GetValue();
+        wxString mass_str = m_mass_input->GetValue();
+        wxString cp_str = m_cp_input->GetValue();
+        wxString mat_str = m_mat_choice->GetStringSelection();
+
+        wxCheckBoxState fix_state = m_is_fixed_checkbox->Get3StateValue();
+        double val;
+
+        for (int id : m_canvas->m_sel_node_ids) {
+            ThermalNode& node = m_active_network.network_nodes[id];
+            
+            if (!mat_str.IsEmpty()) {
+                node.material_name = mat_str.ToStdString();
+            }
+
+            if (!temp_str.IsEmpty() && temp_str.ToDouble(&val)) {
+                node.node_temperature = val;
+            }
+            if (!load_str.IsEmpty() && load_str.ToDouble(&val)) {
+                node.applyHeatLoad(val);
+            }
+            if (!mass_str.IsEmpty() && mass_str.ToDouble(&val)) {
+                node.property_mass = std::max(val, 1e-6);
+            }
+            if (!cp_str.IsEmpty() && cp_str.ToDouble(&val)) {
+                node.property_specific_heat = std::max(val, 1e-6);
+            }
+
+            if (fix_state == wxCHK_CHECKED) {
+                node.fixTemperature(node.node_temperature);
+            } else if (fix_state == wxCHK_UNCHECKED) {
+                node.is_fixed_temperature = false;
+            }
+        }
+    }
+    
+    // edges
     else if (m_currently_editing_edge != -1)
     {
         ThermalEdge& edge = m_active_network.network_edges[m_currently_editing_edge];
-        
         double new_res;
         if (m_res_input->GetValue().ToDouble(&new_res)) {
-            // Assign directly -> stand in
             edge.params = PureResistance{std::max(new_res, 1e-8)}; 
         }
     }
-    // Tell the canvas to redraw with the new numbers
+
+    // redraw canvas
     m_canvas->Refresh();
 }
 
