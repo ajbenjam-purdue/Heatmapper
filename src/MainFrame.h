@@ -6,6 +6,7 @@
 #include <wx/stdpaths.h>
 #include <wx/preferences.h>
 #include <wx/config.h>
+#include <wx/valnum.h>
 #include <format>
 #include <fstream>
 #include <thread>
@@ -51,8 +52,6 @@ private:
     wxTextCtrl* m_flow_disp; // Actual number
     wxButton* m_edge_config_button; // Open configuration window button
 
-    wxButton* m_apply_button; // Apply button
-
     // Labels
     wxStaticText* m_temp_label;
     wxStaticText* m_load_label;
@@ -69,17 +68,30 @@ private:
 
     wxPreferencesEditor m_prefs_editor;
 
+    // Node configuration
+    wxStaticText* m_mat_label;
+    wxChoice* m_mat_choice;
+    wxStaticText* m_mass_label;
+    wxTextCtrl* m_mass_input;
+    wxStaticText* m_cp_label;
+    wxTextCtrl* m_cp_input;
+
+    // Node/Edge property methods
+    void ApplyCurrentProperties();
+    
+    void OnParameterChanged(wxCommandEvent& event);
+    void OnMaterialSelected(wxCommandEvent& event);
     void OnOpen(wxCommandEvent& event);
     void OnSaveAs(wxCommandEvent& event);
     void OnClear(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
     void OnRunSteadyState(wxCommandEvent& event);
     void OnRunTransient(wxCommandEvent& event);
-    void OnApplyProperties(wxCommandEvent& event);
     void OnToolSelect(wxCommandEvent& event);
     void OnCharHook(wxKeyEvent& event);
     void OnEdgeConfigButtonClicked(wxCommandEvent& event);
     void OnDiscretizeButtonClicked(wxCommandEvent& event);
+    void OnResetNodeToAmbient(wxCommandEvent& event);
     void OnMaterialLibOpened(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();

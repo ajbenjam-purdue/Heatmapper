@@ -39,6 +39,22 @@ class MaterialLibrary
 public:
     std::vector<Material> materials;
 
+    // Safe material getter
+    // Sets the provided material to the library's match. Returns true if a matching material is located. If none is found, returns false.
+    bool get_material(std::string name, Material& material)
+    {
+        for (Material& test_material : materials)
+        {
+            if (name == test_material.name)
+            {
+                material = test_material;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // Pushes a new material into a library and returns its index in the vector
     size_t push_material(Material new_material)
     {
