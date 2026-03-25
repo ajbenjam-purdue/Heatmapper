@@ -197,7 +197,7 @@ double ThermalNetwork::highest_node_temperature()
         return 0.0;
     
     // Network has at least one element
-    double res = network_nodes.at(0).node_temperature; // Initialize to first node temperature
+    double res = network_nodes.begin()->second.node_temperature; // Initialize to first node temperature
     for (auto const& [id, node] : network_nodes)
     {
         res = std::max(res, node.node_temperature);
@@ -212,7 +212,7 @@ double ThermalNetwork::lowest_node_temperature()
         return 0.0;
     
     // Network has at least one element
-    double res = network_nodes.at(0).node_temperature; // Initialize to first node temperature
+    double res = network_nodes.begin()->second.node_temperature; // Initialize to first node temperature
     for (auto const& [id, node] : network_nodes)
     {
         res = std::min(res, node.node_temperature);
@@ -297,4 +297,37 @@ std::vector<ThermalNode> ThermalNetwork::connected_nodes(size_t id)
         }
     }
     return result;
+}
+
+void ThermalNetwork::delete_nodes(std::unordered_set<int> nodes)
+{
+    for (int node_id : nodes) {
+        // Erase the node
+        network_nodes.erase(node_id);
+        
+        // Sweep the edge list and destroy any edge connected to this node
+        network_edges.erase(
+            std::remove_if(network_edges.begin(), network_edges.end(),
+                [node_id](const ThermalEdge& edge) {
+                    return edge.id_0 == node_id || edge.id_1 == node_id;
+                }),
+            network_edges.end()
+        );
+    }
+}
+
+// Print network state to console
+void ThermalNetwork::flush_to_cout()
+{
+    std::cout << "NETWORK \"" << network_label << "\"\n NODES: \n";
+    for (auto [id, node] : network_nodes)
+    {
+        std::cout << "  > Node " << id << ": " << node << "\n";
+    }
+    std::cout << " EDGES: \n";
+    for (auto edge : network_edges)
+    {
+        std::cout << "  > Edge " << edge.id_0 << " -> " << edge.id_1 << "\n";
+    }
+    std::cout << std::endl;
 }

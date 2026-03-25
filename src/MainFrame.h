@@ -18,7 +18,7 @@
 #include "EdgeConfigDialog.h"
 #include "DiscretizeDialog.h"
 #include "TransientDialog.h"
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 #include "PrefsPage.h"
 #include "utils.h"
 

@@ -21,6 +21,7 @@ private:
     wxSpinCtrl* m_autosave_mins;
     wxSpinCtrl* m_node_size;
     wxChoice* m_scheme;
+    wxChoice* m_grid_snapping;
     wxTextCtrl* m_default_dt;
     wxTextCtrl* m_ss_iterations_max;
     wxTextCtrl* m_ss_relaxation;

@@ -33,8 +33,19 @@ void ThermalCanvas::OnPaint(wxPaintEvent &event)
     int width, height;
     GetClientSize(&width, &height);
 
-    // Adjust node size based on preferences
-    NODE_RADIUS = (float)(wxConfigBase::Get()->ReadLong("/UI/NodeRadius", 15));
+    // Adjust node size & snapping based on preferences
+    wxConfigBase* config = wxConfigBase::Get();
+    NODE_RADIUS = (float)(config->ReadLong("/UI/NodeRadius", 15));
+    wxString NODE_SNAP_STR;
+    NODE_SNAP_STR = config->Read("/UI/GridSnap", "None");
+    if (NODE_SNAP_STR == "Fine")
+        NODE_SNAP = 1;
+    else if (NODE_SNAP_STR == "Coarse")
+        NODE_SNAP = 2;
+    else
+        NODE_SNAP = 0;
+
+    // std::cout << "Node snapping : " << NODE_SNAP << std::endl;
 
     // Draw snapping guides
     gc->SetPen(wxPen(COLOR_GUIDE, 1));
@@ -563,6 +574,7 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
             double theoretical_x = start_x + total_dx;
             double theoretical_y = start_y + total_dy;
 
+            // Snap to nodes
             for (const auto &[other_id, node] : m_network->network_nodes)
             {
                 if (other_id == id)
@@ -582,7 +594,9 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
                 double theoretical_y_px = theoretical_y * (height - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
                 double node_x_px = node.canvas_position_x * (width - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
                 double node_y_px = node.canvas_position_y * (height - 2 * CANVAS_MARGIN) + CANVAS_MARGIN;
-                if (SNAP_X == -1 && SNAP_Y == -1 && distance_cartesian(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px) >= DISTANCE_NO_SNAP) // Check for diagonal (only if >40px away)
+
+                // Snap to diagonals
+                if (SNAP_X == -1 && SNAP_Y == -1 && distance_cartesian(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px) >= DISTANCE_NO_SNAP) // Check for diagonal (only if >Npx away)
                 {
                     // Check Down-Right Diagonal (y + 10)
                     if (distance_perpendicular(theoretical_x_px, theoretical_y_px, node_x_px, node_y_px, node_x_px + 10, node_y_px + 10) <= 2 * SNAP_MARGIN)
@@ -617,6 +631,38 @@ void ThermalCanvas::OnMouseMove(wxMouseEvent &event)
                         total_dy = rel_y - start_y;
                     }
                 }
+            }
+        }
+
+        // Grid
+        if (SNAP_X == -1 && SNAP_Y == -1)
+        {
+            double grid_step = 0.0;
+
+            if (NODE_SNAP == 1) // Fine grid (0.01)
+                grid_step = 0.01;
+            else if (NODE_SNAP == 2) // Coarse grid (0.04)
+                grid_step = 0.04;
+
+            if (grid_step > 0.0)
+            {
+                int id = *m_sel_node_ids.begin();
+                auto [start_x, start_y] = m_drag_start_nodes[id];
+
+                double theoretical_x = start_x + total_dx;
+                double theoretical_y = start_y + total_dy;
+
+                // Snap to nearest grid coordinate
+                double snapped_x = std::round(theoretical_x / grid_step) * grid_step;
+                double snapped_y = std::round(theoretical_y / grid_step) * grid_step;
+
+                // Clamp to bounds
+                snapped_x = std::clamp(snapped_x, 0.0, 1.0);
+                snapped_y = std::clamp(snapped_y, 0.0, 1.0);
+
+                // Convert snapped coordinates back to drag delta
+                total_dx = snapped_x - start_x;
+                total_dy = snapped_y - start_y;
             }
         }
 
@@ -726,22 +772,10 @@ void ThermalCanvas::DeleteSelectedItems()
 {
     if (m_sel_node_ids.empty() && m_sel_edge_index == -1) return;
 
-    // Delete the edges first
-    m_network->network_edges.erase(
-        std::remove_if(
-            m_network->network_edges.begin(), m_network->network_edges.end(),
-            [&](ThermalEdge& e){
-                bool connectedToDeletedNode = m_sel_node_ids.count(e.id_0) || m_sel_node_ids.count(e.id_1);
-                bool markedForDeletion = (m_sel_edge_index != -1 && &e == &m_network->network_edges[m_sel_edge_index]);
-                return connectedToDeletedNode || markedForDeletion;
-            }
-        ),
-        m_network->network_edges.end());
+    m_network->delete_nodes(m_sel_node_ids);
 
-    // Delete the nodes
-    for (int id : m_sel_node_ids)
-    {
-        m_network->network_nodes.erase(id);
+    if (m_sel_edge_index != -1 && m_sel_edge_index < m_network->network_edges.size()) {
+        m_network->network_edges.erase(m_network->network_edges.begin() + m_sel_edge_index);
     }
 
     // Clear memory and UI

@@ -163,7 +163,7 @@ void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConf
 
     for (double time = 0; time <= total_time; time += dt) 
     {
-        std::cout << "Time " << time << " / " << total_time << " @dt=" << dt << "\n";
+        std::cout << "Time " << time << " / " << total_time << " (dt=" << dt << ")\n";
         // Write current state to CSV
         csv_file << std::fixed << std::setprecision(4) << time;
         for (int i = 0; i < N; ++i) csv_file << "," << T_old(i); // Nodes

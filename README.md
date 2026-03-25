@@ -27,17 +27,30 @@ A primitive materials library is being built up with the application and is mana
 
 This application is built with Wx. In order to locally build the application you must have the Wx library build on your machine. Additionally, you will need to change the paths in `CMakeLists.txt` to local instances of jlohmann/json and Eigen. Any modern version of these libraries should work, and neither has to be built for your specific system (unlike Wx).
 
-Create build dir (MacOS):
+### Create build directory:
+MacOS/Linux (homebrew)
 ```sh
-cmake -B build -DwxWidgets_CONFIG_EXECUTABLE=/PATH_TO_wxWidgets-x.x.x/build-osx/wx-config
+cmake -B build
 ```
 
-Build application (MacOS/Win10):
+*You might have to point cmake at homebrew on mac/linux, add the `-DCMAKE_PREFIX_PATH=/opt/homebrew` flag if you have issues.*
+
+Windows 10 (vcpkg)
+```sh
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=[path/to/vcpkg]/scripts/buildsystems/vcpkg.cmake
+```
+
+### Build application (MacOS/Win10):
 ```sh
 cmake --build build
 ```
 
 ## Changelog
+
+### 0.2.1
+
+ - Added new grid snapping behavior & preferences
+ - Fixed new network node creation bug
 
 ### 0.2.0
 

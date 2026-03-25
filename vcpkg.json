@@ -1,0 +1,9 @@
+{
+  "name": "heatmapper",
+  "version": "0.2.1",
+  "dependencies": [
+    "wxwidgets",
+    "eigen3",
+    "nlohmann-json"
+  ]
+}

@@ -2,10 +2,11 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include "ThermalNode.h"
 #include "ThermalEdge.h"
 
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
 class ThermalNetwork {
@@ -43,6 +44,9 @@ public:
 
     void apply_temperatures(std::vector<double> temperatures);
 
+    // Tools
+    void delete_nodes(std::unordered_set<int> nodes);
+
     // Import/Export
     json to_json() const;
     
@@ -62,4 +66,6 @@ public:
     bool has_edge(size_t id_0, size_t id_1); // Returns true if an edge exists between the two node ids
 
     std::vector<ThermalNode> connected_nodes(size_t id);
+
+    void flush_to_cout();
 };

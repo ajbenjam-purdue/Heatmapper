@@ -3,6 +3,7 @@
 #include <wx/config.h>
 #include <wx/graphics.h>
 #include <unordered_set>
+#include <algorithm>
 #include "ThermalNetwork.h"
 #include "MainFrame.h"
 
@@ -22,6 +23,7 @@ public:
     const static float constexpr SNAP_MARGIN = 6; // pixels
 
     float NODE_RADIUS = 10;
+    int NODE_SNAP = 0; // 0 = free, 1 = fine (0.01), 2 = coarse (0.04)
 
     const wxColour COLOR_UNKNOWN = wxColour(120, 120, 140); // Color for nodes with unknown values
     const wxColour COLOR_SELECT = wxColour(215, 200, 0); // Color for actively selected node/edge

@@ -39,7 +39,15 @@ GeneralPrefsPanel::GeneralPrefsPanel(wxWindow* parent) : wxPanel(parent) {
     m_scheme = new wxChoice(ui_sizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, unit_choices);
     row8->Add(m_scheme, 1, wxEXPAND);
 
+    wxBoxSizer* row9 = new wxBoxSizer(wxHORIZONTAL);
+    row9->Add(new wxStaticText(ui_sizer->GetStaticBox(), wxID_ANY, "Grid Snapping:"), 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
+    wxArrayString grid_choices;
+    grid_choices.Add("Fine"); grid_choices.Add("Coarse"); grid_choices.Add("None");
+    m_grid_snapping = new wxChoice(ui_sizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, grid_choices);
+    row9->Add(m_grid_snapping, 1, wxEXPAND);
+
     ui_sizer->Add(row8, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
+    ui_sizer->Add(row9, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
     ui_sizer->Add(row2, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
 
     // Simulation Settings
@@ -124,6 +132,15 @@ bool GeneralPrefsPanel::TransferDataToWindow() {
         m_scheme->SetSelection(0); 
     }
 
+    // Snapping
+    wxString saved_grid = config->Read("/UI/GridSnap", "None");
+    choice_index = m_grid_snapping->FindString(saved_grid);
+    if (choice_index != wxNOT_FOUND) {
+        m_grid_snapping->SetSelection(choice_index);
+    } else {
+        m_grid_snapping->SetSelection(0); 
+    }
+
     m_is_loading = false;
     return true;
 }
@@ -136,6 +153,7 @@ bool GeneralPrefsPanel::TransferDataFromWindow() {
     config->Write("/Autosave/Interval", m_autosave_mins->GetValue());
     config->Write("/UI/NodeRadius", m_node_size->GetValue());
     config->Write("/UI/NodeScheme", m_scheme->GetStringSelection());
+    config->Write("/UI/GridSnap", m_grid_snapping->GetStringSelection());
     config->Write("/Sim/MaxSSIterations", m_ss_iterations_max->GetValue());
     config->Write("/Sim/SSRelaxation", m_ss_relaxation->GetValue());
     config->Write("/Sim/MaxSSTolerance", m_ss_tolerance_max->GetValue());
