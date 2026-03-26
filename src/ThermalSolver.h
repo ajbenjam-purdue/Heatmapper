@@ -13,6 +13,7 @@ namespace ThermalSolver {
         double delta_t = 0.1;               // Time step size (seconds) (TR)
         double max_time = 5.0;              // Absolute maximum simulation time (TR)
         double residual_threshold = 1e-4;   // Upper limit for residuals (SS/TR)
+        const std::atomic<bool>* stop_requested = nullptr; // Optional stop signal
     };
 
     // Steady State solver

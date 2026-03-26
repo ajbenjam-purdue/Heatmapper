@@ -10,6 +10,8 @@
 #include <format>
 #include <fstream>
 #include <thread>
+#include <atomic>
+#include <memory>
 #include "ThermalNetwork.h"
 #include "MaterialLibrary.h"
 #include "MaterialDialog.h"
@@ -27,6 +29,7 @@ class ThermalCanvas; // Fwd declaration
 class MainFrame : public wxFrame {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
+    ~MainFrame();
     
     MaterialLibrary m_materials;
 
@@ -78,7 +81,6 @@ private:
 
     // Node/Edge property methods
     void ApplyCurrentProperties();
-    
     void OnParameterChanged(wxCommandEvent& event);
     void OnMaterialSelected(wxCommandEvent& event);
     void OnOpen(wxCommandEvent& event);
@@ -93,6 +95,11 @@ private:
     void OnDiscretizeButtonClicked(wxCommandEvent& event);
     void OnResetNodeToAmbient(wxCommandEvent& event);
     void OnMaterialLibOpened(wxCommandEvent& event);
+
+    // Thread management
+    std::unique_ptr<std::thread> m_sim_thread;
+    std::atomic<bool> m_stop_requested{false};
+    void CleanupSimThread();
 
     wxDECLARE_EVENT_TABLE();
 };
