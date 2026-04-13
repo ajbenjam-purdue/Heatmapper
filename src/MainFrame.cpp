@@ -60,9 +60,9 @@ void MainFrame::OnRunSteadyState(wxCommandEvent& event) {
 
     // Create configuration
     ThermalSolver::SimulationConfig steadyStateConfiguration;
-    steadyStateConfiguration.residual_threshold = (double)(wxConfigBase::Get()->ReadDouble("Sim/MaxSSTolerance", 0.1));
-    steadyStateConfiguration.max_ss_iterations = (int)(wxConfigBase::Get()->ReadLong("/Sim/MaxSSIterations", 100));
-    steadyStateConfiguration.ss_relaxation = (double)(wxConfigBase::Get()->ReadDouble("/Sim/SSRelaxation", 0.75));
+    steadyStateConfiguration.residual_threshold = Preferences::get_parameter_double("Sim/MaxSSTolerance", 0.1);
+    steadyStateConfiguration.max_ss_iterations = Preferences::get_parameter_int("/Sim/MaxSSIterations", 100);
+    steadyStateConfiguration.ss_relaxation = Preferences::get_parameter_double("/Sim/SSRelaxation", 0.75);
     steadyStateConfiguration.stop_requested = &m_stop_requested;
     
     std::cout << "Starting with config: " << "MaxSSTolerance=" << steadyStateConfiguration.residual_threshold << ", MaxSSIterations=" << steadyStateConfiguration.max_ss_iterations << ", SSRelaxation=" << steadyStateConfiguration.ss_relaxation << std::endl;
@@ -102,13 +102,19 @@ void MainFrame::OnRunTransient(wxCommandEvent& event) {
 
     // Create configuration
     ThermalSolver::SimulationConfig transientConfiguration;
-    transientConfiguration.residual_threshold = (double)(wxConfigBase::Get()->ReadDouble("Sim/MaxSSTolerance", 0.1));
-    transientConfiguration.max_ss_iterations = (int)(wxConfigBase::Get()->ReadLong("/Sim/MaxSSIterations", 100));
-    transientConfiguration.ss_relaxation = (double)(wxConfigBase::Get()->ReadDouble("/Sim/SSRelaxation", 0.75));
-    transientConfiguration.delta_t = (double)(wxConfigBase::Get()->ReadDouble("/Sim/DefaultDt", 0.01));
+    transientConfiguration.residual_threshold = Preferences::get_parameter_double("Sim/MaxSSTolerance", 0.1);
+    transientConfiguration.max_ss_iterations = Preferences::get_parameter_int("/Sim/MaxSSIterations", 100);
+    transientConfiguration.ss_relaxation = Preferences::get_parameter_double("/Sim/SSRelaxation", 0.75);
+    transientConfiguration.delta_t = Preferences::get_parameter_double("/Sim/DefaultDt", 0.01);
     transientConfiguration.stop_requested = &m_stop_requested;
 
-    TransientDialog dlg(this, transientConfiguration.delta_t);
+    std::string exportFmt = Preferences::get_parameter_string("/Autosave/SaveFmt", "CSV (Uncompressed)").ToStdString();
+    transientConfiguration.save_csv = (exportFmt == "CSV (Uncompressed)") || (exportFmt == "Both");
+    transientConfiguration.save_compressed_csv = (exportFmt == "CSV (Compressed, bz2)") || (exportFmt == "Both");
+
+    // Create the setup dialog
+    // TODO: Rework to just accept the configuration struct
+    TransientDialog dlg(this, transientConfiguration.delta_t, transientConfiguration.save_csv, transientConfiguration.save_compressed_csv);
 
     if (dlg.ShowModal() == wxID_OK)
     {
@@ -116,6 +122,8 @@ void MainFrame::OnRunTransient(wxCommandEvent& event) {
         transientConfiguration.stop_on_steady_state = dlg.GetSteadyStateEnd();
         transientConfiguration.delta_t = dlg.GetTimeStep();
         transientConfiguration.max_time = dlg.GetEndCriteria();
+        transientConfiguration.save_csv = dlg.GetSaveCSV();
+        transientConfiguration.save_compressed_csv = dlg.GetSaveCompressedCSV();
 
         std::string csv_save_filepath = dlg.GetSaveFilePath();
         std::cout << "Savepath: " << csv_save_filepath << "\n" << "Starting with config: " << "MaxSSTolerance=" << transientConfiguration.residual_threshold << ", MaxSSIterations=" << transientConfiguration.max_ss_iterations << ", SSRelaxation=" << transientConfiguration.ss_relaxation << std::endl;
@@ -371,6 +379,23 @@ void MainFrame::OnSaveAs(wxCommandEvent& event) {
         file.close();
     } else {
         wxLogError("Cannot save current contents in file '%s'.", saveFileDialog.GetPath());
+    }
+}
+
+void MainFrame::LoadNetworkFromFile(wxString path) {
+    // Read the file into a JSON object
+    std::ifstream file(path.ToStdString());
+    if (file.is_open()) {
+        nlohmann::json j;
+        file >> j;
+        file.close();
+
+        // Rebuild the network and give it to the canvas
+        m_active_network = ThermalNetwork::from_json(j);
+        m_canvas->SetNetwork(&m_active_network);
+        
+    } else {
+        wxLogError("Cannot open file '%s'.", path);
     }
 }
 
@@ -986,7 +1011,7 @@ void MainFrame::OnDiscretizeButtonClicked(wxCommandEvent& event)
 
 void MainFrame::OnResetNodeToAmbient(wxCommandEvent& event)
 {
-    double default_temp = (double)(wxConfigBase::Get()->ReadDouble("/Sim/DefaultAmbient", 15.0));
+    double default_temp = Preferences::get_parameter_double("/Sim/DefaultAmbient", 15.0);
     if (m_currently_editing_node >= 0) // One node selected
     {
         ThermalNode& node = m_active_network.network_nodes[m_currently_editing_node];

@@ -1,5 +1,5 @@
 # Heatmapper
-### Version 0.2.0 | March 20, 2026
+### Version 0.2.2 | April 12, 2026
 Cross platform GUI Heatmapper tool
 
 ## What is this, who is it for?
@@ -28,7 +28,7 @@ A primitive materials library is being built up with the application and is mana
 This application is built with Wx. In order to locally build the application you must have the Wx library build on your machine. Additionally, you will need to change the paths in `CMakeLists.txt` to local instances of jlohmann/json and Eigen. Any modern version of these libraries should work, and neither has to be built for your specific system (unlike Wx).
 
 ### Create build directory:
-MacOS/Linux (homebrew)
+MacOS (homebrew)
 ```sh
 cmake -B build
 ```
@@ -46,6 +46,13 @@ cmake --build build
 ```
 
 ## Changelog
+
+### 0.2.2
+
+ - Introduced live compression options for transient analysis built on bz2 (standard for unix-like)
+ - Introduced drag-to-open for MacOS
+ - Backend work for future transient viewing window
+ - Refactored preferences (again) to increase abstraction and ease future development
 
 ### 0.2.1
 

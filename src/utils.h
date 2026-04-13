@@ -7,6 +7,11 @@
 #include <wx/config.h>
 
 const double PI = 3.14159265358979323846; 
+static const wxColour MAP_COLORS[7] = {
+    wxColour(190, 20, 40), wxColour(250, 98, 27), wxColour(118, 201, 16),
+    wxColour(24, 219, 167), wxColour(24, 125, 219), wxColour(74, 6, 209),
+    wxColour(207, 27, 183)
+};
 
 // Perpendicular distance from the point (x0, y0) to the line between (x1, y1) and (x2, y2)
 inline double distance_perpendicular(double x0, double y0, double x1, double y1, double x2, double y2)
@@ -173,4 +178,20 @@ inline wxColour map_color(double ratio) // Ratio expressed 0.0-1.0
     unsigned char b = static_cast<unsigned char>((1.0 - t) * map[idx][2] + t * map[idx + 1][2]);
 
     return wxColour(r, g, b);
+}
+
+// Returns a round-robin selected color from a color map
+inline wxColour map_color_round_robin(int i)
+{
+    return MAP_COLORS[static_cast<int>(i%7)];
+}
+
+inline double to_kelvin(double celcius)
+{
+    return celcius + 273.15;
+}
+
+inline double to_celcius(double kelvin)
+{
+    return kelvin - 273.15;
 }

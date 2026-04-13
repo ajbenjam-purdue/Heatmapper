@@ -21,6 +21,7 @@ No dates. Things will come when they come.
 
     - "Live" mode: click run and see how the circuit responds in real time. Need to do lots of learning for that. SCOPE EXPANDED: Radiation/Convection mandate potential iterative solutions, so need to create a solution wrapper that is context aware.
     - "Period" mode: runs analysis for (some amount of time). Outputs CSV for easier analysis.
+    - Chart analysis with all or relevant nodes/edges treated as signals shown. Should support automatic downsampling, signal selection, and zooming/panning/basic analysis.
 
 4. Developer ease of use
 
@@ -35,4 +36,4 @@ No dates. Things will come when they come.
 
 [x] BUG: Edges not loading/saving correctly
 
-[ ] BUG: IMMEDIATE crash after spawning a node into an empty workspace
+[x] BUG: IMMEDIATE crash after spawning a node into an empty workspace

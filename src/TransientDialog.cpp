@@ -11,8 +11,8 @@ wxBEGIN_EVENT_TABLE(TransientDialog, wxDialog)
     EVT_BUTTON(ID_BROWSE_CSV, TransientDialog::OnBrowseCSV)
 wxEND_EVENT_TABLE()
 
-TransientDialog::TransientDialog(wxWindow* parent, double dt)
-    : wxDialog(parent, wxID_ANY, "Transient Solver Options", wxDefaultPosition, wxSize(600,300))
+TransientDialog::TransientDialog(wxWindow* parent, double dt, bool save_csv, bool save_compressed)
+    : wxDialog(parent, wxID_ANY, "Transient Solver Options", wxDefaultPosition, wxDefaultSize)
 {
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
 
@@ -34,6 +34,16 @@ TransientDialog::TransientDialog(wxWindow* parent, double dt)
 
     mainSizer->Add(new wxStaticText(this, wxID_ANY, "Time Step dt (s):"), 0, wxLEFT | wxRIGHT, 8);
     mainSizer->Add(m_dt_input, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
+
+    wxBoxSizer* csvOptionSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_save_csv_checkbox = new wxCheckBox(this, wxID_ANY, "Save CSV");
+    m_save_csv_checkbox->SetValue(save_csv);
+    m_save_compressed_checkbox = new wxCheckBox(this, wxID_ANY, "Save Compressed (bz2)");
+    m_save_compressed_checkbox->SetValue(save_compressed);
+
+    csvOptionSizer->Add(m_save_csv_checkbox, 0, wxRIGHT, 10);
+    csvOptionSizer->Add(m_save_compressed_checkbox, 0);
+    mainSizer->Add(csvOptionSizer, 0, wxLEFT|wxRIGHT|wxTOP, 8);
 
     wxBoxSizer* csvSizer = new wxBoxSizer(wxHORIZONTAL);
 
@@ -76,6 +86,16 @@ double TransientDialog::GetTimeStep() const
     return m_dt_input->GetValue();
 }
 
+bool TransientDialog::GetSaveCSV() const
+{
+    return m_save_csv_checkbox->GetValue();
+}
+
+bool TransientDialog::GetSaveCompressedCSV() const
+{
+    return m_save_compressed_checkbox->GetValue();
+}
+
 void TransientDialog::OnBrowseCSV(wxCommandEvent& event)
 {
     wxFileDialog fileDialog(
@@ -95,6 +115,5 @@ void TransientDialog::OnBrowseCSV(wxCommandEvent& event)
 
 std::string TransientDialog::GetSaveFilePath() const
 {
-    std::string value;
     return m_csv_path->GetValue().ToStdString();
 }

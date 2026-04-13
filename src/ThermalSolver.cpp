@@ -1,6 +1,8 @@
 #include "ThermalSolver.h"
 #include <chrono>
 #include <Eigen/Sparse>
+#include <sstream>
+#include <bzlib.h>
 
 void ThermalSolver::solveSteadyState(ThermalNetwork &network, const SimulationConfig &config)
 {
@@ -75,15 +77,7 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network, const SimulationCo
         {
             int idx = id_to_index[id];
 
-            if (node.is_fixed_temperature) // Fixed temperature BC
-            {
-                // We handle BCs by modifying the triplets and Q
-                // First, remove any triplets for this row that aren't the diagonal
-                // Actually, a simpler way for sparse matrices is to just build the matrix 
-                // and then use solver-specific BC handling or just zero the row manually.
-                // However, building the triplets correctly is most efficient.
-            }
-            else if (node.ext_load != 0.0) // External load
+            if (node.ext_load != 0.0) // External load
             {
                 Q(idx) += node.ext_load;
             }
@@ -93,10 +87,6 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network, const SimulationCo
         Eigen::SparseMatrix<double> K(N, N);
         K.setFromTriplets(triplets.begin(), triplets.end());
 
-        // Apply Fixed Temperature BCs (Row Zeroing + Diag=1)
-        // For sparse matrices, we can use prune() or just rebuild triplets. 
-        // Re-assembling triplets with BC awareness is often cleaner.
-        
         // Refined approach: filter triplets
         std::vector<Eigen::Triplet<double>> filteredTriplets;
         filteredTriplets.reserve(triplets.size());
@@ -114,11 +104,10 @@ void ThermalSolver::solveSteadyState(ThermalNetwork &network, const SimulationCo
         
         for (int idx : fixed_indices) {
             filteredTriplets.push_back(Eigen::Triplet<double>(idx, idx, 1.0));
-            Q(idx) = network.network_nodes.at(network.network_nodes.find(0)->first).node_temperature; // Placeholder fix
-            // Correction: find the actual node
+            // actually find the correct node
         }
 
-        // Wait, let's do this more robustly:
+        // Robust BC handling
         filteredTriplets.clear();
         Q.setZero();
         for (const auto& trip : triplets) {
@@ -193,20 +182,20 @@ void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConf
         if (node.is_fixed_temperature) fixed_indices.insert(idx);
     }
 
-    // Open the CSV File and Write the Header
-    std::ofstream csv_file(save_path);
-    csv_file << "Time (s)";
+    // Use a stringstream to buffer all CSV data for potential compression
+    std::stringstream csv_buffer;
+    csv_buffer << "Time (s)";
 
     // Nodes
     for (int i = 0; i < N; ++i) {
         for (const auto& [id, node] : network.network_nodes) {
             if (id_to_index[id] == i) {
-                csv_file << "," << node.property_label;
+                csv_buffer << "," << node.property_label;
                 if (node.is_fixed_temperature)
-                    csv_file << " (Fixed)";
+                    csv_buffer << " (Fixed)";
                 else if (std::abs(node.ext_load) > 1e-6)
-                    csv_file << (node.ext_load > 0 ? " (+" : " (-") << node.ext_load << "W)";
-                csv_file << " [C]";
+                    csv_buffer << (node.ext_load > 0 ? " (+" : " (-") << node.ext_load << "W)";
+                csv_buffer << " [C]";
                 break;
             }
         }
@@ -216,10 +205,17 @@ void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConf
     for (size_t i = 0; i < network.network_edges.size(); i++)
     {
         const ThermalEdge& edge = network.network_edges.at(i);
-        csv_file << "," << network.network_nodes.at(edge.id_0).property_label << " -> " << network.network_nodes.at(edge.id_1).property_label << " [W]";
+        csv_buffer << "," << network.network_nodes.at(edge.id_0).property_label << " -> " << network.network_nodes.at(edge.id_1).property_label << " [W]";
     }
 
-    csv_file << "\n";
+    csv_buffer << "\n";
+
+    // If we are saving raw CSV, open the file
+    std::ofstream raw_csv_file;
+    if (config.save_csv) {
+        raw_csv_file.open(save_path);
+        raw_csv_file << csv_buffer.str();
+    }
 
     // Sparse Solver Instance
     Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
@@ -235,16 +231,25 @@ void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConf
 
         std::cout << "Time " << time << " / " << total_time << " (dt=" << dt << ")\n";
         
-        // Write current state to CSV
-        csv_file << std::fixed << std::setprecision(4) << time;
-        for (int i = 0; i < N; ++i) csv_file << "," << T_old(i); // Nodes
+        // Build current state line
+        std::stringstream line_buffer;
+        line_buffer << std::fixed << std::setprecision(4) << time;
+        for (int i = 0; i < N; ++i) line_buffer << "," << T_old(i); // Nodes
         for (size_t i = 0; i < network.network_edges.size(); i++)   // Edges
         {
             const ThermalEdge& edge = network.network_edges.at(i);
             double flux = (T_old(id_to_index[edge.id_1]) - T_old(id_to_index[edge.id_0])) / edge.resistance(T_old(id_to_index[edge.id_1]), T_old(id_to_index[edge.id_0]));
-            csv_file << "," << flux;
+            line_buffer << "," << flux;
         }
-        csv_file << "\n";
+        line_buffer << "\n";
+
+        // Append to accumulation buffer
+        csv_buffer << line_buffer.str();
+
+        // Write to raw CSV if requested
+        if (config.save_csv) {
+            raw_csv_file << line_buffer.str();
+        }
 
         // Build the Implicit Matrices A and b
         // A = [K] + [C]/dt
@@ -298,7 +303,36 @@ void ThermalSolver::solveTransient(ThermalNetwork &network, const SimulationConf
         T_old = solver.solve(b);
     }
 
-    csv_file.close();
+    if (config.save_csv) {
+        raw_csv_file.close();
+        std::cout << "Saved raw CSV to " << save_path << "\n";
+    }
+
+    // bzip2 compression if requested
+    if (config.save_compressed_csv) {
+        std::string csv_data = csv_buffer.str();
+        unsigned int in_size = (unsigned int)csv_data.size();
+        
+        // bzip2 output buffer should be approx 1.01 * in_size + 600 as per bz2 docs
+        unsigned int out_size = (unsigned int)(in_size * 1.01) + 600; 
+        std::vector<char> compressed_data(out_size);
+
+        // 900k block size (theoretical best comp), default work factor of 30
+        int result = BZ2_bzBuffToBuffCompress(
+            compressed_data.data(), &out_size, 
+            const_cast<char*>(csv_data.data()), 
+            in_size, 9, 0, 30
+        );
+
+        if (result == BZ_OK) {
+            std::ofstream compressed_file(save_path + ".bz2", std::ios::binary);
+            compressed_file.write(compressed_data.data(), out_size);
+            compressed_file.close();
+            std::cout << "Saved compressed CSV to " << save_path << ".bz2" << "\n";
+        } else {
+            std::cerr << "bzip2 compression failed with error code: " << result << "\n";
+        }
+    }
 
     // Update the network with the very last computed temperatures
     for (auto& [id, node] : network.network_nodes) {

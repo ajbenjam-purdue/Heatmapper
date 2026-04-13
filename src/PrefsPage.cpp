@@ -19,10 +19,9 @@ GeneralPrefsPanel::GeneralPrefsPanel(wxWindow* parent) : wxPanel(parent) {
     m_autosave_mins = new wxSpinCtrl(save_sizer->GetStaticBox(), wxID_ANY);
     m_autosave_mins->SetRange(1, 60);
     row1->Add(m_autosave_enable, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 10);
+    row1->AddStretchSpacer(1);
     row1->Add(new wxStaticText(save_sizer->GetStaticBox(), wxID_ANY, "Interval (mins):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
     row1->Add(m_autosave_mins, 0, wxALIGN_CENTER_VERTICAL);
-
-    save_sizer->Add(row1, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
 
     // UI Settings
     wxStaticBoxSizer* ui_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Interface");
@@ -32,23 +31,6 @@ GeneralPrefsPanel::GeneralPrefsPanel(wxWindow* parent) : wxPanel(parent) {
     m_node_size->SetRange(4, 16);
     row2->Add(m_node_size, 1, wxEXPAND);
 
-    wxBoxSizer* row8 = new wxBoxSizer(wxHORIZONTAL);
-    row8->Add(new wxStaticText(ui_sizer->GetStaticBox(), wxID_ANY, "Node Color Scheme:"), 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    wxArrayString unit_choices;
-    unit_choices.Add("Viridis"); unit_choices.Add("Plasma"); unit_choices.Add("Magma");
-    m_scheme = new wxChoice(ui_sizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, unit_choices);
-    row8->Add(m_scheme, 1, wxEXPAND);
-
-    wxBoxSizer* row9 = new wxBoxSizer(wxHORIZONTAL);
-    row9->Add(new wxStaticText(ui_sizer->GetStaticBox(), wxID_ANY, "Grid Snapping:"), 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    wxArrayString grid_choices;
-    grid_choices.Add("Fine"); grid_choices.Add("Coarse"); grid_choices.Add("None");
-    m_grid_snapping = new wxChoice(ui_sizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, grid_choices);
-    row9->Add(m_grid_snapping, 1, wxEXPAND);
-
-    ui_sizer->Add(row8, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
-    ui_sizer->Add(row9, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
-    ui_sizer->Add(row2, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
 
     // Simulation Settings
     wxStaticBoxSizer* sim_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Simulation Defaults");
@@ -89,11 +71,37 @@ GeneralPrefsPanel::GeneralPrefsPanel(wxWindow* parent) : wxPanel(parent) {
     m_default_ambient->SetDigits(1);
     row7->Add(m_default_ambient, 1, wxEXPAND);
 
+    wxBoxSizer* row8 = new wxBoxSizer(wxHORIZONTAL);
+    row8->Add(new wxStaticText(ui_sizer->GetStaticBox(), wxID_ANY, "Node Color Scheme:"), 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
+    wxArrayString unit_choices;
+    unit_choices.Add("Viridis"); unit_choices.Add("Plasma"); unit_choices.Add("Magma");
+    m_scheme = new wxChoice(ui_sizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, unit_choices);
+    row8->Add(m_scheme, 1, wxEXPAND);
+
+    wxBoxSizer* row9 = new wxBoxSizer(wxHORIZONTAL);
+    row9->Add(new wxStaticText(ui_sizer->GetStaticBox(), wxID_ANY, "Grid Snapping:"), 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
+    wxArrayString grid_choices;
+    grid_choices.Add("Fine"); grid_choices.Add("Coarse"); grid_choices.Add("None");
+    m_grid_snapping = new wxChoice(ui_sizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, grid_choices);
+    row9->Add(m_grid_snapping, 1, wxEXPAND);
+
+    wxBoxSizer* row10 = new wxBoxSizer(wxHORIZONTAL);
+    row10->Add(new wxStaticText(save_sizer->GetStaticBox(), wxID_ANY, "Transient Analysis Saving:"), 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
+    wxArrayString export_choices;
+    export_choices.Add("CSV (Uncompressed)"); export_choices.Add("CSV (Compressed, bz2)"); export_choices.Add("Both");
+    m_export = new wxChoice(save_sizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, export_choices);
+    row10->Add(m_export, 1, wxEXPAND);
+
+    save_sizer->Add(row1, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
+    ui_sizer->Add(row2, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
     sim_sizer->Add(row3, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
     sim_sizer->Add(row4, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
     sim_sizer->Add(row5, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
     sim_sizer->Add(row6, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
     sim_sizer->Add(row7, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
+    ui_sizer->Add(row8, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
+    ui_sizer->Add(row9, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
+    save_sizer->Add(row10, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 4);
 
     main_sizer->Add(sim_sizer, 0, wxEXPAND | wxALL, 5);
     main_sizer->Add(save_sizer, 0, wxEXPAND | wxALL, 5);
@@ -123,9 +131,12 @@ bool GeneralPrefsPanel::TransferDataToWindow() {
     config->Read("/Sim/DefaultAmbient", &ambient_val, 15.0); 
     m_default_ambient->SetValue(ambient_val);
 
+    // MC
+    int choice_index;
+
     // Colors
     wxString saved_unit = config->Read("/UI/NodeScheme", "Celsius");
-    int choice_index = m_scheme->FindString(saved_unit);
+    choice_index = m_scheme->FindString(saved_unit);
     if (choice_index != wxNOT_FOUND) {
         m_scheme->SetSelection(choice_index);
     } else {
@@ -141,6 +152,15 @@ bool GeneralPrefsPanel::TransferDataToWindow() {
         m_grid_snapping->SetSelection(0); 
     }
 
+    // Saving
+    wxString saved_save_fmt = config->Read("/Autosave/SaveFmt", "CSV (Uncompressed)");
+    choice_index = m_export->FindString(saved_save_fmt);
+    if (choice_index != wxNOT_FOUND) {
+        m_export->SetSelection(choice_index);
+    } else {
+        m_export->SetSelection(0); 
+    }
+
     m_is_loading = false;
     return true;
 }
@@ -151,6 +171,7 @@ bool GeneralPrefsPanel::TransferDataFromWindow() {
 
     config->Write("/Autosave/Enabled", m_autosave_enable->GetValue());
     config->Write("/Autosave/Interval", m_autosave_mins->GetValue());
+    config->Write("/Autosave/SaveFmt", m_export->GetStringSelection());
     config->Write("/UI/NodeRadius", m_node_size->GetValue());
     config->Write("/UI/NodeScheme", m_scheme->GetStringSelection());
     config->Write("/UI/GridSnap", m_grid_snapping->GetStringSelection());

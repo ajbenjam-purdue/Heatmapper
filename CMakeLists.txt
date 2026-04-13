@@ -14,6 +14,7 @@ find_package(wxWidgets REQUIRED COMPONENTS core base)
 include(${wxWidgets_USE_FILE}) 
 find_package(Eigen3 REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(BZip2 REQUIRED)
 
 # Pack assets
 file(GLOB_RECURSE ALL_ASSETS "assets/*") 
@@ -24,13 +25,13 @@ if(APPLE)
         get_filename_component(DEST_DIR "${REL_DIR}" DIRECTORY)
         set_source_files_properties("${ASSET_FILE}" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/${DEST_DIR}")
     endforeach()
-    
+
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.icns")
         set_source_files_properties("assets/icon.icns" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     endif()
 
     set(APP_ASSETS ${ALL_ASSETS})
-    
+
 elseif(WIN32)
     set(RC_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/generated_resource.rc")
     file(WRITE ${RC_FILE_PATH} "AppIcon ICON \"${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.ico\"\n")
@@ -57,6 +58,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${wxWidgets_LIBRARIES}
     Eigen3::Eigen
     nlohmann_json::nlohmann_json
+    BZip2::BZip2
 )
 
 # OS Properties

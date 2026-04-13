@@ -4,6 +4,7 @@
   "dependencies": [
     "wxwidgets",
     "eigen3",
-    "nlohmann-json"
+    "nlohmann-json",
+    "bzip2"
   ]
 }

@@ -14,6 +14,8 @@ namespace ThermalSolver {
         double max_time = 5.0;              // Absolute maximum simulation time (TR)
         double residual_threshold = 1e-4;   // Upper limit for residuals (SS/TR)
         const std::atomic<bool>* stop_requested = nullptr; // Optional stop signal
+        bool save_csv = true;               // Save the raw CSV
+        bool save_compressed_csv = false;   // Save the compressed BZ2 CSV
     };
 
     // Steady State solver

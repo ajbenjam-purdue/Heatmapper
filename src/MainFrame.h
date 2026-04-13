@@ -12,6 +12,7 @@
 #include <thread>
 #include <atomic>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include "ThermalNetwork.h"
 #include "MaterialLibrary.h"
 #include "MaterialDialog.h"
@@ -20,8 +21,8 @@
 #include "EdgeConfigDialog.h"
 #include "DiscretizeDialog.h"
 #include "TransientDialog.h"
-#include <nlohmann/json.hpp>
 #include "PrefsPage.h"
+#include "Preferences.h"
 #include "utils.h"
 
 class ThermalCanvas; // Fwd declaration
@@ -40,6 +41,7 @@ public:
     void UpdateToolbarIcons();
     void UpdateDynamicMenus();
     void OnPreferences(wxCommandEvent& evt);
+    void LoadNetworkFromFile(wxString path);
 
 private:
 
